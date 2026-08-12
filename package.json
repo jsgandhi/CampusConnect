@@ -1,0 +1,27 @@
+{
+  "name": "campus-connect-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CampusConnect production-grade full-stack web application",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "build": "npm run build --workspace=shared && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "test": "npm run test --workspace=backend && npm run test --workspace=frontend",
+    "lint": "npm run lint --workspace=shared && npm run lint --workspace=backend && npm run lint --workspace=frontend",
+    "type-check": "npm run type-check --workspace=shared && npm run type-check --workspace=backend && npm run type-check --workspace=frontend",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend",
+    "test:e2e": "npm run test:e2e --workspace=frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}

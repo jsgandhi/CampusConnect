@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+  FACULTY
+}
+
+enum EventCategory {
+  ACADEMIC
+  SOCIAL
+  CAREER
+  WORKSHOP
+  SPORTS
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  WAITLISTED
+  DROPPED
+}
+
+enum RsvpStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String
+  passwordHash String
+  role         Role          @default(STUDENT)
+  avatarUrl    String?
+  studentId    String?       @unique
+  major        String?
+  term         String?
+  gpa          Float?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  enrollments  Enrollment[]
+  rsvps        EventRSVP[]
+  appointments Appointment[]
+  chatMessages ChatMessage[]
+}
+
+model Course {
+  id            String       @id @default(uuid())
+  code          String       @unique
+  title         String
+  description   String
+  credits       Int
+  department    String
+  instructor    String
+  schedule      String
+  location      String
+  capacity      Int
+  enrolledCount Int          @default(0)
+  prerequisites String[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  enrollments   Enrollment[]
+}
+
+model Enrollment {
+  id         String           @id @default(uuid())
+  userId     String
+  courseId   String
+  status     EnrollmentStatus @default(ENROLLED)
+  enrolledAt DateTime         @default(now())
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model CampusEvent {
+  id          String        @id @default(uuid())
+  title       String
+  description String
+  category    EventCategory @default(ACADEMIC)
+  location    String
+  startTime   DateTime
+  endTime     DateTime
+  organizer   String
+  capacity    Int
+  rsvpCount   Int           @default(0)
+  imageUrl    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  rsvps       EventRSVP[]
+}
+
+model EventRSVP {
+  id        String      @id @default(uuid())
+  userId    String
+  eventId   String
+  status    RsvpStatus  @default(CONFIRMED)
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     CampusEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+model Advisor {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  department   String
+  title        String
+  office       String
+  avatarUrl    String?
+  specialities String[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Appointment {
+  id        String            @id @default(uuid())
+  studentId String
+  advisorId String
+  startTime DateTime
+  endTime   DateTime
+  purpose   String
+  notes     String?
+  status    AppointmentStatus @default(SCHEDULED)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  student   User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  advisor   Advisor           @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  sender    String   // 'user' | 'assistant'
+  content   String
+  category  String?
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
