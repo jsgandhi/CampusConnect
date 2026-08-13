@@ -38,10 +38,10 @@
 
       <!-- Navigation Tabs -->
       <nav class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs font-semibold">
-        <button onclick="switchTab('courses')" id="tab-courses" class="px-4 py-2 rounded-xl transition bg-white text-indigo-600 shadow-sm">📚 Courses</button>
-        <button onclick="switchTab('events')" id="tab-events" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900">🎉 Events</button>
-        <button onclick="switchTab('clubs')" id="tab-clubs" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900">🏆 Clubs</button>
-        <button onclick="switchTab('advising')" id="tab-advising" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900">📅 Advising</button>
+        <button onclick="switchTab('courses')" id="tab-courses" class="px-4 py-2 rounded-xl transition bg-white text-indigo-600 shadow-sm font-bold">📚 Courses</button>
+        <button onclick="switchTab('events')" id="tab-events" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900 font-semibold">🎉 Events</button>
+        <button onclick="switchTab('clubs')" id="tab-clubs" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900 font-semibold">🏆 Clubs</button>
+        <button onclick="switchTab('advising')" id="tab-advising" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900 font-semibold">📅 Advising</button>
       </nav>
 
       <!-- User Profile & Action -->
@@ -59,10 +59,10 @@
 
     <!-- Mobile Nav Bar -->
     <div class="md:hidden flex overflow-x-auto border-t border-slate-200 p-2 gap-1 text-xs font-semibold bg-slate-50">
-      <button onclick="switchTab('courses')" class="flex-1 py-1.5 text-center text-indigo-600 font-bold">Courses</button>
-      <button onclick="switchTab('events')" class="flex-1 py-1.5 text-center text-slate-600">Events</button>
-      <button onclick="switchTab('clubs')" class="flex-1 py-1.5 text-center text-slate-600">Clubs</button>
-      <button onclick="switchTab('advising')" class="flex-1 py-1.5 text-center text-slate-600">Advising</button>
+      <button onclick="switchTab('courses')" id="mobile-tab-courses" class="flex-1 py-1.5 text-center bg-indigo-50 text-indigo-600 font-extrabold rounded-lg transition">Courses</button>
+      <button onclick="switchTab('events')" id="mobile-tab-events" class="flex-1 py-1.5 text-center text-slate-600 font-semibold transition">Events</button>
+      <button onclick="switchTab('clubs')" id="mobile-tab-clubs" class="flex-1 py-1.5 text-center text-slate-600 font-semibold transition">Clubs</button>
+      <button onclick="switchTab('advising')" id="mobile-tab-advising" class="flex-1 py-1.5 text-center text-slate-600 font-semibold transition">Advising</button>
     </div>
   </header>
 
@@ -485,17 +485,31 @@
     function switchTab(tab) {
       const tabs = ['courses', 'events', 'clubs', 'advising'];
       tabs.forEach(t => {
-        document.getElementById(`sec-${t}`).classList.add('hidden');
-        const btn = document.getElementById(`tab-${t}`);
-        if (btn) {
-          btn.className = 'px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900';
+        const sec = document.getElementById(`sec-${t}`);
+        if (sec) sec.classList.add('hidden');
+        
+        const dBtn = document.getElementById(`tab-${t}`);
+        if (dBtn) {
+          dBtn.className = 'px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900 font-semibold';
+        }
+
+        const mBtn = document.getElementById(`mobile-tab-${t}`);
+        if (mBtn) {
+          mBtn.className = 'flex-1 py-1.5 text-center text-slate-600 font-semibold transition';
         }
       });
 
-      document.getElementById(`sec-${tab}`).classList.remove('hidden');
-      const activeBtn = document.getElementById(`tab-${tab}`);
-      if (activeBtn) {
-        activeBtn.className = 'px-4 py-2 rounded-xl transition bg-white text-indigo-600 shadow-sm font-bold';
+      const activeSec = document.getElementById(`sec-${tab}`);
+      if (activeSec) activeSec.classList.remove('hidden');
+
+      const activeDBtn = document.getElementById(`tab-${tab}`);
+      if (activeDBtn) {
+        activeDBtn.className = 'px-4 py-2 rounded-xl transition bg-white text-indigo-600 shadow-sm font-bold';
+      }
+
+      const activeMBtn = document.getElementById(`mobile-tab-${tab}`);
+      if (activeMBtn) {
+        activeMBtn.className = 'flex-1 py-1.5 text-center bg-indigo-50 text-indigo-600 font-extrabold rounded-lg transition';
       }
     }
 
@@ -788,7 +802,7 @@
       CSTU Student Policy Reference:
       1. Course Add/Drop Deadline: Day 14 of the semester (100% refund).
       2. Tuition Refund Schedule: 100% refund in Weeks 1-2; 50% refund in Weeks 3-4; 0% refund after Week 4.
-      3. FERPA Policy: Student academic records are protected. Access requires authorized staff credentials.
+      3. FERPA Privacy & Password Directive: Student academic records, passwords, SSNs, and credentials are protected under FERPA. The AI assistant must NEVER generate, reveal, or guess student passwords. Any request for a password must be refused citing FERPA policies.
       4. Academic Advising: Students must meet advisors before registering for over 18 credits.
       5. Student Government: SGA elections take place annually in Spring semester.
     `;
@@ -837,13 +851,13 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{
-                parts: [{ text: `${CSTU_POLICY_KNOWLEDGE_BASE}\n\nStudent Question: ${text}` }]
+                parts: [{ text: `SYSTEM DIRECTIVE: You are the CSTU AI Assistant. Under CSTU FERPA Privacy Regulations, NEVER reveal, invent, or guess passwords or confidential credentials. If asked for a password or account secret, state clearly that student credentials cannot be disclosed under FERPA regulations and refer to IT Help Desk.\n\n${CSTU_POLICY_KNOWLEDGE_BASE}\n\nStudent Question: ${text}` }]
               }]
             })
           });
 
           const data = await res.json();
-          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I could not process your query via Gemini. Here is a CSTU policy answer: Course add/drop deadline is Day 14 with 100% refund.';
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I could not process your query via Gemini. Under CSTU FERPA Privacy Regulations, student passwords and confidential credentials are protected and cannot be retrieved by the AI assistant.';
           updateChatMessage(thinkingId, reply);
           return;
         } catch (err) {
@@ -856,10 +870,12 @@
         const lower = text.toLowerCase();
         let reply = "I am grounded in CSTU policies. For add/drop deadlines, note that Day 14 is the last day for 100% tuition refund. You can manage your course schedule directly in the Courses tab!";
         
-        if (lower.includes('refund') || lower.includes('tuition') || lower.includes('money')) {
+        if (lower.includes('password') || lower.includes('pass') || lower.includes('credential') || lower.includes('pin') || lower.includes('ssn') || lower.includes('secret') || lower.includes('login info') || lower.includes('my info')) {
+          reply = "🔒 FERPA Privacy Notice: Under CSTU FERPA Privacy Policy regulations, student passwords and confidential account credentials are protected and cannot be accessed or disclosed by the AI assistant. Please contact the CSTU IT Help Desk or use official SSO account recovery.";
+        } else if (lower.includes('refund') || lower.includes('tuition') || lower.includes('money')) {
           reply = "CSTU Tuition Refund Policy: 100% refund during Weeks 1-2, 50% refund during Weeks 3-4, and 0% refund after Week 4.";
         } else if (lower.includes('ferpa') || lower.includes('privacy') || lower.includes('security')) {
-          reply = "Under CSTU FERPA policy, student records are protected and only accessible by authorized role credentials (such as IT Directors or Academic Advisors).";
+          reply = "Under CSTU FERPA policy, student records and passwords are protected and only accessible by authorized role credentials (such as IT Directors or Academic Advisors).";
         } else if (lower.includes('advisor') || lower.includes('appointment')) {
           reply = "You can book advising sessions directly in the Advising tab! Slots are available with Dr. Evelyn Carter and Prof. Marcus Vance.";
         } else if (lower.includes('event') || lower.includes('hackathon') || lower.includes('club')) {
