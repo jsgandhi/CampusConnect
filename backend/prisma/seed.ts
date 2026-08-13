@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding CampusConnect database...');
+  console.log('Seeding CampusConnect CSTU persona database...');
 
   // Clean existing data
   await prisma.chatMessage.deleteMany();
@@ -15,14 +15,14 @@ async function main() {
   await prisma.course.deleteMany();
   await prisma.user.deleteMany();
 
-  // Create Mock Students
-  const demoStudent = await prisma.user.create({
+  // Create CSTU Personas
+  const studentPersona = await prisma.user.create({
     data: {
-      email: 'alex.student@campusconnect.edu',
+      email: 'student@cstu.edu',
       name: 'Alex Rivera',
-      passwordHash: 'demo1234', // Mock password hash
+      passwordHash: 'password123',
       role: 'STUDENT',
-      studentId: 'STU-2026-8891',
+      studentId: 'CSTU-2026-8891',
       major: 'Computer Science & Software Engineering',
       term: 'Senior (Spring 2026)',
       gpa: 3.84,
@@ -30,7 +30,35 @@ async function main() {
     },
   });
 
-  console.log(`Created demo student: ${demoStudent.name} (${demoStudent.email})`);
+  const clubPresidentPersona = await prisma.user.create({
+    data: {
+      email: 'club-president@cstu.edu',
+      name: 'Jordan Lee',
+      passwordHash: 'password123',
+      role: 'STUDENT',
+      studentId: 'CSTU-2026-7742',
+      major: 'Artificial Intelligence & Data Science',
+      term: 'Senior (Spring 2026)',
+      gpa: 3.92,
+      avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=256',
+    },
+  });
+
+  const adminPersona = await prisma.user.create({
+    data: {
+      email: 'admin@cstu.edu',
+      name: 'Morgan Taylor',
+      passwordHash: 'password123',
+      role: 'ADMIN',
+      studentId: 'CSTU-ADM-1001',
+      major: 'Academic Operations & System Affairs',
+      term: 'Faculty / Admin',
+      gpa: 4.0,
+      avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256',
+    },
+  });
+
+  console.log(`Created CSTU personas: ${studentPersona.email}, ${clubPresidentPersona.email}, ${adminPersona.email}`);
 
   // Create Courses
   const courses = await Promise.all([
@@ -98,11 +126,12 @@ async function main() {
 
   console.log(`Created ${courses.length} courses.`);
 
-  // Enroll student in CS-401 and PM-320
+  // Enroll student persona in CS-401 and PM-320
   await prisma.enrollment.createMany({
     data: [
-      { userId: demoStudent.id, courseId: courses[0].id, status: 'ENROLLED' },
-      { userId: demoStudent.id, courseId: courses[2].id, status: 'ENROLLED' },
+      { userId: studentPersona.id, courseId: courses[0].id, status: 'ENROLLED' },
+      { userId: studentPersona.id, courseId: courses[2].id, status: 'ENROLLED' },
+      { userId: clubPresidentPersona.id, courseId: courses[1].id, status: 'ENROLLED' },
     ],
   });
 
@@ -111,7 +140,7 @@ async function main() {
     prisma.advisor.create({
       data: {
         name: 'Dr. Robert Chen',
-        email: 'r.chen@campusconnect.edu',
+        email: 'r.chen@cstu.edu',
         department: 'Computer Science',
         title: 'Senior Academic Advisor & Department Chair',
         office: 'Engineering Hall 405',
@@ -122,7 +151,7 @@ async function main() {
     prisma.advisor.create({
       data: {
         name: 'Prof. Amanda Taylor',
-        email: 'a.taylor@campusconnect.edu',
+        email: 'a.taylor@cstu.edu',
         department: 'Career Services',
         title: 'Career & Internship Counselor',
         office: 'Student Union 210',
@@ -185,7 +214,7 @@ async function main() {
   // RSVP student to Tech Career Fair
   await prisma.eventRSVP.create({
     data: {
-      userId: demoStudent.id,
+      userId: studentPersona.id,
       eventId: events[0].id,
       status: 'CONFIRMED',
     },
@@ -194,7 +223,7 @@ async function main() {
   // Create an appointment for student
   await prisma.appointment.create({
     data: {
-      studentId: demoStudent.id,
+      studentId: studentPersona.id,
       advisorId: advisors[0].id,
       startTime: new Date('2026-08-22T14:00:00Z'),
       endTime: new Date('2026-08-22T14:30:00Z'),

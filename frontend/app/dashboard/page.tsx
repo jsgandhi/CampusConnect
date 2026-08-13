@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 import { Sidebar } from '@/components/sidebar';
 import { Footer } from '@/components/footer';
@@ -12,41 +13,68 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
 import { BookOpen, Calendar, UserCheck, Bot, GraduationCap, ArrowUpRight, Sparkles, Clock } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import { User, Course, CampusEvent, Appointment } from '@campusconnect/shared';
+import { Course, CampusEvent, Appointment } from '@campusconnect/shared';
+import { validateFakePersonaUrl, PREDEFINED_PERSONAS, StudentPersona } from '@/lib/personas';
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [activePersona, setActivePersona] = useState<StudentPersona>(PREDEFINED_PERSONAS[0]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [events, setEvents] = useState<CampusEvent[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isUrlVerified, setIsUrlVerified] = useState(false);
 
   useEffect(() => {
+    // Read persona from search params URL or local storage
+    const personaQuery = searchParams.get('persona');
+    const isVerifiedQuery = searchParams.get('verified') === 'true';
+
+    let matchedPersona: StudentPersona | null = null;
+    if (personaQuery) {
+      matchedPersona = validateFakePersonaUrl(personaQuery);
+    }
+
+    if (!matchedPersona && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('campusconnect_user');
+      if (stored) {
+        try {
+          matchedPersona = JSON.parse(stored);
+        } catch (_) {}
+      }
+    }
+
+    if (matchedPersona) {
+      setActivePersona(matchedPersona);
+    }
+
+    if (isVerifiedQuery) {
+      setIsUrlVerified(true);
+    }
+
     async function loadDashboardData() {
       setLoading(true);
       setError(null);
       try {
-        const [profileRes, coursesRes, eventsRes, appointmentsRes] = await Promise.all([
-          apiClient.getProfile(),
+        const [coursesRes, eventsRes, appointmentsRes] = await Promise.all([
           apiClient.getCourses(),
           apiClient.getEvents(),
           apiClient.getAppointments(),
         ]);
 
-        if (profileRes.data) setUser(profileRes.data);
         if (coursesRes.data) setCourses(coursesRes.data.slice(0, 2));
         if (eventsRes.data) setEvents(eventsRes.data.slice(0, 2));
         if (appointmentsRes.data) setAppointments(appointmentsRes.data);
       } catch (err: unknown) {
-        setError('Failed to connect to backend server. Using local cache state.');
+        setError('Failed to connect to backend server. Using local persona cache state.');
       } finally {
         setLoading(false);
       }
     }
 
     loadDashboardData();
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -57,7 +85,7 @@ export default function DashboardPage() {
           {/* Welcome Banner */}
           <div className="glass-panel rounded-2xl p-6 lg:p-8 border border-slate-800 relative overflow-hidden">
             <div className="absolute -top-12 -right-12 w-64 h-64 bg-brand-600/10 blur-2xl rounded-full pointer-events-none"></div>
-            
+
             {loading ? (
               <div className="space-y-3">
                 <Skeleton className="h-8 w-64" />
@@ -68,13 +96,16 @@ export default function DashboardPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <Badge variant="brand">Spring 2026</Badge>
-                    <span className="text-xs text-slate-400 font-mono">GPA: {user?.gpa || '3.84'}</span>
+                    <Badge variant="neutral" className="font-mono text-[11px]">
+                      {activePersona.role}
+                    </Badge>
+                    <span className="text-xs text-slate-400 font-mono">GPA: {activePersona.gpa}</span>
                   </div>
-                  <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                    Welcome back, {user?.name || 'Alex Rivera'} 👋
+                  <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                    Welcome back, {activePersona.name} 👋
                   </h1>
                   <p className="text-sm text-slate-400">
-                    {user?.major || 'Computer Science & Software Engineering'} • Student ID: <span className="font-mono text-brand-400">{user?.studentId || 'STU-2026-8891'}</span>
+                    {activePersona.title} • {activePersona.major} • ID: <span className="font-mono text-brand-400">{activePersona.studentId}</span>
                   </p>
                 </div>
 
@@ -88,6 +119,12 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {isUrlVerified && (
+            <Alert variant="success" title="Fake URL Persona Validation Passed">
+              Validated persona credential: <strong className="font-mono">{activePersona.email}</strong> via frontend URL verification pipeline.
+            </Alert>
+          )}
 
           {error && (
             <Alert variant="warning" title="Backend Status Note">
@@ -285,5 +322,19 @@ export default function DashboardPage() {
       </div>
       <Footer />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-8">
+          <Skeleton className="h-48 w-full max-w-xl" />
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }
