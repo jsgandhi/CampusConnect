@@ -1,74 +1,95 @@
 # CampusConnect
 
-CampusConnect is a proof-of-concept web application developed for the CSTU MB668 Project Management with AI course. The project demonstrates how Agile project management, AI-assisted development, and modern web technologies can be combined to rapidly deliver a Minimum Viable Product (MVP).
+CampusConnect is a full-stack proof-of-concept web application developed for the CSTU MB668 Project Management with AI course. The project demonstrates how Agile project management, AI-assisted development, and modern web technologies combine to deliver a Minimum Viable Product (MVP).
 
 ## Project Overview
 
-Universities often require students to navigate multiple disconnected systems for course registration, events, advising, and campus resources. CampusConnect consolidates these services into a single, user-friendly interface.
+Universities often require students to navigate multiple disconnected systems for course registration, campus events, student clubs, advising, and executive oversight. CampusConnect consolidates these services into a unified, persona-adapted platform.
 
-This repository contains the MVP developed by Team 3 – Nexus Solutions.
+Developed by **Team 3 – Nexus Solutions**:
+- **Jeeta Gandhi** – Project Manager
+- **Garick Chan** – Business Analyst / AI Lead
+- **Himanshu Rajpal** – Product Manager
+- **Hanqing Zhao** – Developer
 
-## Team
+---
 
-- Jeeta Gandhi – Project Manager
-- Garick Chan – Business Analyst / AI Lead
-- Himanshu Rajpal – Product Manager
-- Hanqing Zhao – Developer
+## 📁 Repository Structure (`app_build/`)
 
-## MVP Features
-
-- Secure mock student login
-- Student dashboard
-- Mock course registration
-- Campus event directory
-- Advisor appointment scheduler
-- AI-powered campus assistant
-- Developer testing panel
-
-## Technology Stack
-
-- HTML5
-- CSS3
-- JavaScript (ES6)
-- Tailwind CSS
-- Google Gemini API
-- GitHub
-
-## Project Management
-
-This project follows a Hybrid Agile methodology consisting of four sprints:
-
-1. Foundation & Authentication
-2. Core Student Workflows
-3. AI Integration
-4. Testing, Security, and Final Demo
-
-## Repository Structure
+The application lives inside `app_build/`:
 
 ```
-/
-├── index.html
-├── css/
-├── js/
-├── assets/
-├── docs/
-└── README.md
+CampusConnect/
+├── app_build/
+│   ├── backend/
+│   │   ├── server.js                          ← Zero-dependency Node.js HTTP server
+│   │   └── server.py                          ← Zero-dependency Python 3 HTTP server
+│   ├── database/
+│   │   └── SCHEMA.sql                         ← Relational DB reference blueprint
+│   ├── frontend/
+│   │   ├── login.html                         ← Single Sign-On gateway (4 personas)
+│   │   ├── index.html                         ← Student Portal dashboard
+│   │   ├── observability.html                 ← IT & DevOps Observability dashboard
+│   │   ├── steering_committee_dashboard.html  ← Steering Committee executive dashboard
+│   │   └── dashboard_metrics_template.csv     ← Executive metrics template
+│   └── README.md                              ← Detailed app documentation
+├── MVP_Technical_Playbook.md                  ← Architectural scope & implementation guide
+├── AGENTS.md                                  ← AI Agent operating guidelines
+└── README.md                                  ← Top-level project guide
 ```
 
-## Getting Started
+---
 
-Clone the repository:
+## 🚀 How to Run Locally
 
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/<organization>/<repository>.git
+git clone https://github.com/jsgandhi/CampusConnect.git
+cd CampusConnect
 ```
 
-Open `index.html` in your browser or run using a local web server.
+### 2. Start the Local Server
+Zero external npm packages or database installations required!
 
-## Disclaimer
+**Using Node.js**:
+```bash
+cd app_build/backend
+node server.js
+```
 
-CampusConnect is an academic project created for educational purposes. Authentication, student records, and AI interactions use mock data and are not intended for production use.
+**Using Python 3**:
+```bash
+cd app_build/backend
+python3 server.py
+```
 
-## License
+Your default browser will automatically open to **http://localhost:3000**.
 
-This project was developed as coursework for CSTU MB668 and is intended for educational use only.
+---
+
+## 🔑 Demo Personas & Credentials
+
+Sign in on `login.html` using any of the 4 pre-configured personas:
+
+| Email | Persona | Dashboard | Key Features |
+| :--- | :--- | :--- | :--- |
+| `student@cstu.edu` | Student (Alex Rivera) | `/dashboard` | Course registration, event directory, club browser, advising calendar, grounded Gemini AI assistant. |
+| `student-gov@cstu.edu` | Student Government (Jordan Lee) | `/dashboard` | All student features + **Post Event** publishing capability. |
+| `it-director@cstu.edu` | IT Director (Marcus Vance) | `/observability` | System CPU/Memory load gauges, HTTP latency charts, FERPA audit logs, live telemetry. |
+| `admin@cstu.edu` | Steering Committee (Dr. Evelyn Carter) | `/executive` | Executive KPIs, sprint burndown chart, release roadmap, CSV metrics upload. |
+
+---
+
+## ✨ Key Features & Technical Highlights
+
+- **Zero-Dependency Backend**: Pure Node.js standard library or Python 3 HTTP server.
+- **Grounded Gemini AI Assistant**: Dynamic API Key configuration modal in chat header, with fallback to grounded CSTU policy rules.
+- **Role-Based Access Control (RBAC)**: Redirects unauthorized personas with clear notification toasts.
+- **LocalStorage State Persistence**: Courses, RSVPs, clubs, and advising appointments persist across refreshes with a "Reset Mock Data" button in the Developer HUD.
+- **Path Sanitization**: Backend server blocks directory traversal security vulnerabilities.
+
+---
+
+## 📜 License & Disclaimer
+
+CampusConnect is an academic project created for CSTU MB668 coursework and educational demonstration only.

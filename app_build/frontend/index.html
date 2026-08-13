@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusConnect — Student Portal Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col pb-20">
+
+  <!-- Top Toast Alert Container -->
+  <div id="toast" class="fixed top-4 right-4 z-50 transform translate-y-[-100%] opacity-0 transition-all duration-300 pointer-events-none max-w-sm w-full">
+    <div id="toastContent" class="bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-3">
+      <span id="toastIcon">ℹ️</span>
+      <span id="toastMsg">Notification</span>
+    </div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🎓</span>
+        <div>
+          <a href="/dashboard" class="font-extrabold text-slate-900 text-lg tracking-tight hover:text-indigo-600 transition">CampusConnect</a>
+          <div class="text-[10px] text-slate-500 font-semibold tracking-wide uppercase">CSTU Student Portal</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs font-semibold">
+        <button onclick="switchTab('courses')" id="tab-courses" class="px-4 py-2 rounded-xl transition bg-white text-indigo-600 shadow-sm">📚 Courses</button>
+        <button onclick="switchTab('events')" id="tab-events" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900">🎉 Events</button>
+        <button onclick="switchTab('clubs')" id="tab-clubs" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900">🏆 Clubs</button>
+        <button onclick="switchTab('advising')" id="tab-advising" class="px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900">📅 Advising</button>
+      </nav>
+
+      <!-- User Profile & Action -->
+      <div class="flex items-center gap-3">
+        <div id="userBadge" class="hidden sm:flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-full text-xs">
+          <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+          <span id="userName" class="font-bold text-slate-800">Alex Rivera</span>
+          <span id="userRole" class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-extrabold uppercase">STUDENT</span>
+        </div>
+        <button onclick="handleLogout()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3.5 py-2 rounded-xl border border-slate-200 transition">
+          Sign Out
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Bar -->
+    <div class="md:hidden flex overflow-x-auto border-t border-slate-200 p-2 gap-1 text-xs font-semibold bg-slate-50">
+      <button onclick="switchTab('courses')" class="flex-1 py-1.5 text-center text-indigo-600 font-bold">Courses</button>
+      <button onclick="switchTab('events')" class="flex-1 py-1.5 text-center text-slate-600">Events</button>
+      <button onclick="switchTab('clubs')" class="flex-1 py-1.5 text-center text-slate-600">Clubs</button>
+      <button onclick="switchTab('advising')" class="flex-1 py-1.5 text-center text-slate-600">Advising</button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- ================= SECTION 1: COURSE REGISTRATION ================= -->
+    <section id="sec-courses" class="space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Course Registration & Schedule</h1>
+          <p class="text-xs text-slate-500 mt-1">Browse available CSTU courses, register for credits, and manage your weekly schedule.</p>
+        </div>
+        
+        <!-- Search & Filter Controls -->
+        <div class="flex items-center gap-2">
+          <input type="text" id="courseSearch" oninput="renderCourses()" placeholder="Search course or code..." class="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 w-48 sm:w-64">
+          <select id="deptFilter" onchange="renderCourses()" class="bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">All Depts</option>
+            <option value="CS">CS</option>
+            <option value="DATA">Data Sci</option>
+            <option value="PM">Proj Mgmt</option>
+            <option value="CYBER">Cybersec</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Courses Catalog Grid (2 cols on LG) -->
+        <div class="lg:col-span-2 space-y-4">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Available Courses</h2>
+          <div id="coursesGrid" class="grid sm:grid-cols-2 gap-4">
+            <!-- Dynamic course cards inserted via JS -->
+          </div>
+        </div>
+
+        <!-- My Enrolled Schedule Sidebar (1 col on LG) -->
+        <div class="space-y-4">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+            <span>My Registered Schedule</span>
+            <span id="creditBadge" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold">0 Credits</span>
+          </h2>
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <div id="enrolledList" class="space-y-3">
+              <!-- Enrolled items inserted via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION 2: EVENT DIRECTORY ================= -->
+    <section id="sec-events" class="space-y-6 hidden">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Campus Event Directory</h1>
+          <p class="text-xs text-slate-500 mt-1">Discover campus workshops, SGA hackathons, guest lectures, and social mixers.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="text" id="eventSearch" oninput="renderEvents()" placeholder="Search events..." class="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 w-48 sm:w-64">
+          <select id="eventCatFilter" onchange="renderEvents()" class="bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">All Categories</option>
+            <option value="Academic">Academic</option>
+            <option value="Social">Social</option>
+            <option value="Career">Career</option>
+            <option value="SGA Special">SGA Special</option>
+          </select>
+          <!-- Post Event Button (Student-Gov Role Only) -->
+          <button id="postEventBtn" onclick="openPostEventModal()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+            <span>+ Post Event</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="eventsGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dynamic event cards -->
+      </div>
+    </section>
+
+    <!-- ================= SECTION 3: CLUB BROWSER ================= -->
+    <section id="sec-clubs" class="space-y-6 hidden">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Student Organizations & Clubs</h1>
+          <p class="text-xs text-slate-500 mt-1">Join campus student organizations, network with peers, and participate in projects.</p>
+        </div>
+        <input type="text" id="clubSearch" oninput="renderClubs()" placeholder="Search clubs..." class="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <div id="clubsGrid" class="lg:col-span-2 grid sm:grid-cols-2 gap-4">
+          <!-- Clubs inserted via JS -->
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">My Joined Clubs</h2>
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div id="myClubsList" class="space-y-3">
+              <!-- My clubs inserted via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION 4: ADVISING SCHEDULER ================= -->
+    <section id="sec-advising" class="space-y-6 hidden">
+      <div>
+        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Academic & Career Advising Scheduler</h1>
+        <p class="text-xs text-slate-500 mt-1">Schedule 1-on-1 sessions with CSTU faculty advisors and career counselors.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-4">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Available Advising Slots</h2>
+          <div id="appointmentsGrid" class="grid sm:grid-cols-2 gap-4">
+            <!-- Advising slots inserted via JS -->
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">My Appointments</h2>
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div id="myAppointmentsList" class="space-y-3">
+              <!-- Appointments list inserted via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Grounded Gemini AI Student Assistant Floating Widget -->
+  <div class="fixed bottom-16 right-4 sm:bottom-16 sm:right-6 z-40">
+    <!-- Chat Window Container -->
+    <div id="chatWindow" class="hidden w-80 sm:w-96 h-[460px] bg-slate-900 text-slate-100 rounded-3xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden transition-all duration-300">
+      
+      <!-- Chat Header -->
+      <div class="bg-slate-800/90 border-b border-slate-700/80 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white text-sm font-bold shadow-md">
+            ✨
+          </div>
+          <div>
+            <div class="text-xs font-extrabold text-white flex items-center gap-1.5">
+              CSTU AI Assistant
+              <span id="aiKeyBadge" class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded font-bold">Grounded</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Policy & Academic Assistant</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <!-- Key Config Button -->
+          <button onclick="toggleKeyModal()" title="Set Gemini API Key" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700 transition text-xs">
+            🔑 Key
+          </button>
+          <!-- Close Button -->
+          <button onclick="toggleChat()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700 transition text-sm">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Area -->
+      <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+        <div class="bg-slate-800/80 border border-slate-700/60 p-3 rounded-2xl max-w-[85%] text-slate-200">
+          👋 Hi! I'm your grounded CSTU Student Assistant. Ask me about course add/drop deadlines, tuition refund schedules, FERPA privacy rules, or advising guidelines!
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <form onsubmit="handleSendMessage(event)" class="p-3 bg-slate-800/60 border-t border-slate-700/60 flex gap-2">
+        <input type="text" id="chatInput" placeholder="Ask CSTU AI Assistant..." required class="flex-1 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:border-indigo-500">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl font-bold text-xs transition">
+          Send
+        </button>
+      </form>
+    </div>
+
+    <!-- Floating Trigger Button -->
+    <button onclick="toggleChat()" class="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white p-3.5 rounded-full shadow-2xl flex items-center gap-2 font-bold text-xs border border-indigo-400/30 transition transform hover:scale-105 active:scale-95">
+      <span class="text-base">✨</span>
+      <span>CSTU AI Support</span>
+    </button>
+  </div>
+
+  <!-- Developer HUD Bar -->
+  <footer class="fixed bottom-0 left-0 right-0 bg-slate-900 text-slate-300 border-t border-slate-800 px-4 py-2.5 z-30 flex items-center justify-between text-xs">
+    <div class="flex items-center gap-3">
+      <span class="font-bold text-indigo-400 flex items-center gap-1.5">
+        <span>🛠️</span> Dev HUD:
+      </span>
+      <span id="hudPersona" class="text-slate-400">Persona: Student</span>
+    </div>
+    
+    <div class="flex items-center gap-2">
+      <button onclick="openSchemaModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1 rounded-lg font-semibold transition text-[11px]">
+        📄 View SCHEMA.sql
+      </button>
+      <button onclick="resetLocalData()" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-lg font-semibold transition text-[11px]">
+        🔄 Reset Mock Data
+      </button>
+    </div>
+  </footer>
+
+  <!-- Modal 1: Gemini API Key Config -->
+  <div id="keyModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-slate-100 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-white">Configure Gemini API Key</h3>
+        <button onclick="toggleKeyModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">
+        Enter your Google Gemini API Key below for live responses. If left empty, the assistant seamlessly falls back to grounded offline CSTU policy answers.
+      </p>
+      <input type="password" id="geminiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500">
+      <div class="flex justify-end gap-2 text-xs">
+        <button onclick="saveGeminiKey('')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl">Clear Key</button>
+        <button onclick="saveGeminiKey(document.getElementById('geminiKeyInput').value)" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: View SCHEMA.sql -->
+  <div id="schemaModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full max-h-[80vh] flex flex-col overflow-hidden text-slate-100 shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+          <span>📄</span> Database Reference Blueprint: SCHEMA.sql
+        </h3>
+        <button onclick="closeSchemaModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div class="p-4 overflow-y-auto flex-1 bg-slate-950 font-mono text-xs text-emerald-400">
+        <pre id="schemaContent">Loading SCHEMA.sql...</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Post Event (Student-Gov Role) -->
+  <div id="postEventModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-slate-100 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-white">Post New Campus Event</h3>
+        <button onclick="closePostEventModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <form onsubmit="handlePostEvent(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">Event Title</label>
+          <input type="text" id="newEventTitle" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 outline-none text-white focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Category</label>
+          <select id="newEventCategory" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 outline-none text-white focus:border-indigo-500">
+            <option value="SGA Special">SGA Special</option>
+            <option value="Academic">Academic</option>
+            <option value="Social">Social</option>
+            <option value="Career">Career</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Date & Time</label>
+          <input type="text" id="newEventDate" placeholder="e.g. Oct 28, 4:00 PM" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 outline-none text-white focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Location</label>
+          <input type="text" id="newEventLocation" placeholder="e.g. Student Union Center" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 outline-none text-white focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Description</label>
+          <textarea id="newEventDesc" rows="3" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 outline-none text-white focus:border-indigo-500"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closePostEventModal()" class="px-3 py-2 bg-slate-800 text-slate-300 rounded-xl">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl">Publish Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic & Datasets -->
+  <script>
+    // Initial Seed Datasets (Mirrors SCHEMA.sql)
+    const SEED_COURSES = [
+      { id: 1, code: 'CS-101', title: 'Intro to Artificial Intelligence', credits: 4, instructor: 'Dr. Alan Turing', schedule: 'Mon/Wed 10:00 AM - 11:30 AM', dept: 'CS', capacity: 30, enrolled: 24, desc: 'Foundations of state space search, knowledge representation, and neural networks.' },
+      { id: 2, code: 'PM-402', title: 'Agile Project Management & GenAI', credits: 3, instructor: 'Prof. Jeeta Gandhi', schedule: 'Tue/Thu 2:00 PM - 3:30 PM', dept: 'PM', capacity: 25, enrolled: 19, desc: 'PMBOK 8th Edition guidelines combined with AI-assisted software delivery.' },
+      { id: 3, code: 'DATA-210', title: 'Applied Data Science & Machine Learning', credits: 4, instructor: 'Dr. Grace Hopper', schedule: 'Mon/Wed 1:00 PM - 2:30 PM', dept: 'DATA', capacity: 28, enrolled: 28, desc: 'Data cleaning, feature engineering, regression models, and evaluation matrices.' },
+      { id: 4, code: 'CYBER-305', title: 'Network Security & FERPA Compliance', credits: 3, instructor: 'Prof. Marcus Vance', schedule: 'Fri 9:00 AM - 12:00 PM', dept: 'CYBER', capacity: 20, enrolled: 14, desc: 'Cybersecurity frameworks, encryption standards, and educational privacy policy.' },
+      { id: 5, code: 'CS-350', title: 'Full-Stack Web Architecture', credits: 4, instructor: 'Dr. Linus Torvalds', schedule: 'Tue/Thu 10:00 AM - 11:30 AM', dept: 'CS', capacity: 32, enrolled: 26, desc: 'REST API design, client-state persistence, and zero-dependency microservices.' },
+      { id: 6, code: 'PM-510', title: 'Executive Stakeholder Governance', credits: 3, instructor: 'Dr. Evelyn Carter', schedule: 'Wed 4:00 PM - 7:00 PM', dept: 'PM', capacity: 15, enrolled: 12, desc: 'Strategic decision frameworks, burndown metrics analysis, and steering boards.' }
+    ];
+
+    const SEED_EVENTS = [
+      { id: 1, title: 'CSTU Annual Fall AI Hackathon', category: 'SGA Special', date: 'Oct 24, 9:00 AM - 6:00 PM', location: 'Innovation Hub Auditorium', created_by: 'STUDENT_GOV', organizer: 'Jordan Lee', rsvpCount: 42, desc: 'Build local mock apps using GenAI and compete for CSTU scholarship awards.' },
+      { id: 2, title: 'Tech Career & Internship Fair 2026', category: 'Career', date: 'Nov 02, 10:00 AM - 3:00 PM', location: 'CSTU Student Center', created_by: 'ADMIN', organizer: 'Career Services', rsvpCount: 88, desc: 'Meet recruiters from top Silicon Valley tech companies and local startups.' },
+      { id: 3, title: 'Agile & AI Project Management Panel', category: 'Academic', date: 'Nov 10, 4:00 PM - 5:30 PM', location: 'Hall B - Room 204', created_by: 'ADMIN', organizer: 'Prof. Rajpal', rsvpCount: 29, desc: 'Industry panel discussing LLM code generation and PMBOK 8th Edition practices.' },
+      { id: 4, title: 'SGA Campus Bonfire & Welcome Mixer', category: 'Social', date: 'Nov 15, 6:00 PM - 9:00 PM', location: 'Quad Lawn', created_by: 'STUDENT_GOV', organizer: 'Jordan Lee', rsvpCount: 65, desc: 'Free refreshments, live music, and networking for all CSTU students.' }
+    ];
+
+    const SEED_CLUBS = [
+      { id: 1, name: 'CSTU Artificial Intelligence Society', category: 'Academic', schedule: 'Tuesdays 5:00 PM', contact: 'ai-club@cstu.edu', memberCount: 54, desc: 'Hands-on workshops on transformer architectures, prompt engineering, and LLMs.' },
+      { id: 2, name: 'Developer & Open Source Guild', category: 'Engineering', schedule: 'Thursdays 6:00 PM', contact: 'dev-guild@cstu.edu', memberCount: 38, desc: 'Collaborative open source coding projects and full-stack software development.' },
+      { id: 3, name: 'Women in Tech & Cybersecurity', category: 'Professional', schedule: 'Mondays 4:00 PM', contact: 'wit@cstu.edu', memberCount: 41, desc: 'Mentorship, career networking, and skill building for women in tech.' }
+    ];
+
+    const SEED_APPOINTMENTS = [
+      { id: 1, advisor: 'Dr. Evelyn Carter', dept: 'Academic Advising', date: 'Oct 26', time: '10:00 AM', status: 'AVAILABLE', notes: 'Degree audit & graduation check' },
+      { id: 2, advisor: 'Prof. Marcus Vance', dept: 'Career Services', date: 'Oct 26', time: '2:00 PM', status: 'AVAILABLE', notes: 'Resume review & mock interview' },
+      { id: 3, advisor: 'Dr. Alan Turing', dept: 'CS Faculty Advising', date: 'Oct 27', time: '11:00 AM', status: 'AVAILABLE', notes: 'CS Elective selection & research prerequisites' },
+      { id: 4, advisor: 'Prof. Jeeta Gandhi', dept: 'Project Mgmt Office', date: 'Oct 28', time: '3:00 PM', status: 'AVAILABLE', notes: 'Capstone project guidance' }
+    ];
+
+    // State Variables
+    let currentUser = null;
+    let courses = [];
+    let enrollments = [];
+    let events = [];
+    let rsvps = [];
+    let clubs = [];
+    let joinedClubs = [];
+    let appointments = [];
+
+    // Initialize State on Load
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check user session
+      const userStr = localStorage.getItem('cstu_user');
+      if (!userStr) {
+        window.location.href = '/login';
+        return;
+      }
+
+      currentUser = JSON.parse(userStr);
+      
+      // Enforce RBAC check (Students & Student-Gov allowed on /dashboard)
+      if (currentUser.role === 'IT_DIRECTOR') {
+        window.location.href = '/observability?unauthorized=true';
+        return;
+      } else if (currentUser.role === 'ADMIN') {
+        window.location.href = '/executive?unauthorized=true';
+        return;
+      }
+
+      // Populate User UI
+      document.getElementById('userName').textContent = currentUser.name;
+      document.getElementById('userRole').textContent = currentUser.role;
+      document.getElementById('hudPersona').textContent = `Persona: ${currentUser.name} (${currentUser.role})`;
+
+      // Show SGA Post Event button if STUDENT_GOV
+      if (currentUser.role === 'STUDENT_GOV') {
+        document.getElementById('postEventBtn').classList.remove('hidden');
+      }
+
+      // Initialize Datasets from LocalStorage or SEED defaults
+      initLocalData();
+
+      // Initial Render
+      renderCourses();
+      renderEvents();
+      renderClubs();
+      renderAppointments();
+    });
+
+    function initLocalData() {
+      courses = JSON.parse(localStorage.getItem('cstu_courses')) || SEED_COURSES;
+      enrollments = JSON.parse(localStorage.getItem('cstu_enrollments')) || [1, 2]; // default enrolled in CS-101 and PM-402
+      events = JSON.parse(localStorage.getItem('cstu_events')) || SEED_EVENTS;
+      rsvps = JSON.parse(localStorage.getItem('cstu_rsvps')) || [1];
+      clubs = JSON.parse(localStorage.getItem('cstu_clubs')) || SEED_CLUBS;
+      joinedClubs = JSON.parse(localStorage.getItem('cstu_joined_clubs')) || [1];
+      appointments = JSON.parse(localStorage.getItem('cstu_appointments')) || SEED_APPOINTMENTS;
+    }
+
+    function saveState() {
+      localStorage.setItem('cstu_courses', JSON.stringify(courses));
+      localStorage.setItem('cstu_enrollments', JSON.stringify(enrollments));
+      localStorage.setItem('cstu_events', JSON.stringify(events));
+      localStorage.setItem('cstu_rsvps', JSON.stringify(rsvps));
+      localStorage.setItem('cstu_clubs', JSON.stringify(clubs));
+      localStorage.setItem('cstu_joined_clubs', JSON.stringify(joinedClubs));
+      localStorage.setItem('cstu_appointments', JSON.stringify(appointments));
+    }
+
+    function resetLocalData() {
+      if (confirm('Reset all mock data back to baseline defaults?')) {
+        localStorage.removeItem('cstu_courses');
+        localStorage.removeItem('cstu_enrollments');
+        localStorage.removeItem('cstu_events');
+        localStorage.removeItem('cstu_rsvps');
+        localStorage.removeItem('cstu_clubs');
+        localStorage.removeItem('cstu_joined_clubs');
+        localStorage.removeItem('cstu_appointments');
+        initLocalData();
+        renderCourses();
+        renderEvents();
+        renderClubs();
+        renderAppointments();
+        showToast('🔄 Mock datasets reset to baseline defaults!');
+      }
+    }
+
+    function showToast(msg, icon = 'ℹ️') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+      toastMsg.textContent = msg;
+      toastIcon.textContent = icon;
+      toast.classList.remove('translate-y-[-100%]', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-[-100%]', 'opacity-0');
+      }, 3000);
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('cstu_user');
+      window.location.href = '/login';
+    }
+
+    function switchTab(tab) {
+      const tabs = ['courses', 'events', 'clubs', 'advising'];
+      tabs.forEach(t => {
+        document.getElementById(`sec-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) {
+          btn.className = 'px-4 py-2 rounded-xl transition text-slate-600 hover:text-slate-900';
+        }
+      });
+
+      document.getElementById(`sec-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      if (activeBtn) {
+        activeBtn.className = 'px-4 py-2 rounded-xl transition bg-white text-indigo-600 shadow-sm font-bold';
+      }
+    }
+
+    // ================= COURSES RENDER & ACTION =================
+    function renderCourses() {
+      const search = document.getElementById('courseSearch').value.toLowerCase();
+      const dept = document.getElementById('deptFilter').value;
+
+      const filtered = courses.filter(c => {
+        const matchSearch = c.title.toLowerCase().includes(search) || c.code.toLowerCase().includes(search);
+        const matchDept = (dept === 'ALL') || c.dept === dept;
+        return matchSearch && matchDept;
+      });
+
+      const grid = document.getElementById('coursesGrid');
+      grid.innerHTML = filtered.map(c => {
+        const isEnrolled = enrollments.includes(c.id);
+        return `
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:border-indigo-300 transition">
+            <div>
+              <div class="flex items-center justify-between text-xs mb-2">
+                <span class="font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg">${c.code}</span>
+                <span class="text-slate-500 font-semibold">${c.credits} Credits</span>
+              </div>
+              <h3 class="font-bold text-slate-900 text-sm leading-snug">${c.title}</h3>
+              <p class="text-[11px] text-slate-500 mt-1 leading-relaxed line-clamp-2">${c.desc}</p>
+              <div class="mt-3 text-[11px] text-slate-600 space-y-1">
+                <div>👨‍🏫 <span class="font-medium">${c.instructor}</span></div>
+                <div>🕒 <span>${c.schedule}</span></div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-[10px] text-slate-400 font-bold">Cap: ${c.enrolled}/${c.capacity}</span>
+              ${isEnrolled ? `
+                <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1">
+                  ✓ Enrolled
+                </span>
+              ` : `
+                <button onclick="toggleEnroll(${c.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm transition">
+                  Enroll Course
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      renderSchedule();
+    }
+
+    function toggleEnroll(id) {
+      if (enrollments.includes(id)) {
+        enrollments = enrollments.filter(eId => eId !== id);
+        const c = courses.find(item => item.id === id);
+        if (c && c.enrolled > 0) c.enrolled--;
+        showToast('Dropped course from your schedule.');
+      } else {
+        enrollments.push(id);
+        const c = courses.find(item => item.id === id);
+        if (c) c.enrolled++;
+        showToast('🎉 Enrolled successfully in course!', '✅');
+      }
+      saveState();
+      renderCourses();
+    }
+
+    function renderSchedule() {
+      const enrolledCourses = courses.filter(c => enrollments.includes(c.id));
+      const totalCredits = enrolledCourses.reduce((sum, c) => sum + c.credits, 0);
+      document.getElementById('creditBadge').textContent = `${totalCredits} Credits Total`;
+
+      const list = document.getElementById('enrolledList');
+      if (enrolledCourses.length === 0) {
+        list.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">No courses registered yet.</div>`;
+        return;
+      }
+
+      list.innerHTML = enrolledCourses.map(c => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+          <div>
+            <div class="font-bold text-slate-900">${c.code}: ${c.title}</div>
+            <div class="text-[10px] text-slate-500">${c.schedule}</div>
+          </div>
+          <button onclick="toggleEnroll(${c.id})" title="Drop Course" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-1">
+            ✕
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // ================= EVENTS RENDER & ACTION =================
+    function renderEvents() {
+      const search = document.getElementById('eventSearch').value.toLowerCase();
+      const cat = document.getElementById('eventCatFilter').value;
+
+      const filtered = events.filter(e => {
+        const matchSearch = e.title.toLowerCase().includes(search) || e.desc.toLowerCase().includes(search);
+        const matchCat = (cat === 'ALL') || e.category === cat;
+        return matchSearch && matchCat;
+      });
+
+      const grid = document.getElementById('eventsGrid');
+      grid.innerHTML = filtered.map(e => {
+        const isRsvped = rsvps.includes(e.id);
+        return `
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition">
+            <div>
+              <div class="flex items-center justify-between text-xs mb-2">
+                <span class="font-bold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full">${e.category}</span>
+                <span class="text-slate-400 text-[10px] font-semibold">${e.organizer}</span>
+              </div>
+              <h3 class="font-bold text-slate-900 text-sm leading-snug">${e.title}</h3>
+              <p class="text-xs text-slate-500 mt-2 leading-relaxed">${e.desc}</p>
+              <div class="mt-4 space-y-1 text-xs text-slate-600">
+                <div>📅 <span class="font-medium">${e.date}</span></div>
+                <div>📍 <span>${e.location}</span></div>
+              </div>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs text-slate-500 font-semibold">👥 ${e.rsvpCount} Attending</span>
+              <button onclick="toggleRsvp(${e.id})" class="${isRsvped ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white'} font-bold text-xs px-4 py-1.5 rounded-xl shadow-sm transition">
+                ${isRsvped ? '✓ Attending' : 'RSVP Event'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleRsvp(id) {
+      const ev = events.find(e => e.id === id);
+      if (rsvps.includes(id)) {
+        rsvps = rsvps.filter(rId => rId !== id);
+        if (ev && ev.rsvpCount > 0) ev.rsvpCount--;
+        showToast('RSVP cancelled.');
+      } else {
+        rsvps.push(id);
+        if (ev) ev.rsvpCount++;
+        showToast('🎉 You are attending this event!', '✅');
+      }
+      saveState();
+      renderEvents();
+    }
+
+    function openPostEventModal() { document.getElementById('postEventModal').classList.remove('hidden'); }
+    function closePostEventModal() { document.getElementById('postEventModal').classList.add('hidden'); }
+
+    function handlePostEvent(e) {
+      e.preventDefault();
+      const newEv = {
+        id: Date.now(),
+        title: document.getElementById('newEventTitle').value,
+        category: document.getElementById('newEventCategory').value,
+        date: document.getElementById('newEventDate').value,
+        location: document.getElementById('newEventLocation').value,
+        desc: document.getElementById('newEventDesc').value,
+        created_by: currentUser.role,
+        organizer: currentUser.name,
+        rsvpCount: 1
+      };
+      events.unshift(newEv);
+      rsvps.push(newEv.id);
+      saveState();
+      renderEvents();
+      closePostEventModal();
+      showToast('📢 SGA Event published successfully!', '✅');
+    }
+
+    // ================= CLUBS RENDER & ACTION =================
+    function renderClubs() {
+      const search = document.getElementById('clubSearch').value.toLowerCase();
+      const filtered = clubs.filter(c => c.name.toLowerCase().includes(search) || c.desc.toLowerCase().includes(search));
+
+      const grid = document.getElementById('clubsGrid');
+      grid.innerHTML = filtered.map(c => {
+        const isJoined = joinedClubs.includes(c.id);
+        return `
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-bold text-indigo-600 mb-1">${c.category}</div>
+              <h3 class="font-bold text-slate-900 text-sm">${c.name}</h3>
+              <p class="text-xs text-slate-500 mt-1">${c.desc}</p>
+              <div class="mt-3 text-[11px] text-slate-600">🕒 ${c.schedule}</div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs text-slate-400 font-semibold">${c.memberCount} Members</span>
+              <button onclick="toggleJoinClub(${c.id})" class="${isJoined ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-900 text-white'} font-bold text-xs px-3.5 py-1.5 rounded-xl transition">
+                ${isJoined ? '✓ Joined' : 'Join Club'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      renderMyClubs();
+    }
+
+    function toggleJoinClub(id) {
+      const c = clubs.find(item => item.id === id);
+      if (joinedClubs.includes(id)) {
+        joinedClubs = joinedClubs.filter(cId => cId !== id);
+        if (c && c.memberCount > 0) c.memberCount--;
+        showToast('Left club membership.');
+      } else {
+        joinedClubs.push(id);
+        if (c) c.memberCount++;
+        showToast('Joined student club!', '🏆');
+      }
+      saveState();
+      renderClubs();
+    }
+
+    function renderMyClubs() {
+      const myClubs = clubs.filter(c => joinedClubs.includes(c.id));
+      const list = document.getElementById('myClubsList');
+      if (myClubs.length === 0) {
+        list.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">No joined clubs yet.</div>`;
+        return;
+      }
+      list.innerHTML = myClubs.map(c => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+          <div>
+            <div class="font-bold text-slate-900">${c.name}</div>
+            <div class="text-[10px] text-slate-500">${c.schedule}</div>
+          </div>
+          <button onclick="toggleJoinClub(${c.id})" class="text-rose-500 font-bold">✕</button>
+        </div>
+      `).join('');
+    }
+
+    // ================= ADVISING RENDER & ACTION =================
+    function renderAppointments() {
+      const grid = document.getElementById('appointmentsGrid');
+      grid.innerHTML = appointments.map(a => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-bold text-indigo-600">${a.dept}</span>
+              <span class="font-extrabold px-2 py-0.5 rounded text-[10px] ${a.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${a.status}</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">${a.advisor}</h3>
+            <p class="text-xs text-slate-500 mt-1">${a.notes}</p>
+            <div class="mt-3 text-xs text-slate-600 font-semibold">📅 ${a.date} at ${a.time}</div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+            ${a.status === 'AVAILABLE' ? `
+              <button onclick="bookAppointment(${a.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition">
+                Book Slot
+              </button>
+            ` : `
+              <span class="text-xs text-slate-400 font-bold">Reserved</span>
+            `}
+          </div>
+        </div>
+      `).join('');
+
+      renderMyAppointments();
+    }
+
+    function bookAppointment(id) {
+      const appt = appointments.find(a => a.id === id);
+      if (appt) {
+        appt.status = 'CONFIRMED';
+        saveState();
+        renderAppointments();
+        showToast('📅 Appointment booked and confirmed with advisor!', '✅');
+      }
+    }
+
+    function renderMyAppointments() {
+      const myAppts = appointments.filter(a => a.status === 'CONFIRMED');
+      const list = document.getElementById('myAppointmentsList');
+      if (myAppts.length === 0) {
+        list.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">No booked appointments.</div>`;
+        return;
+      }
+      list.innerHTML = myAppts.map(a => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+          <div class="font-bold text-slate-900">${a.advisor} (${a.dept})</div>
+          <div class="text-slate-600">📅 ${a.date} at ${a.time}</div>
+          <div class="text-[10px] text-emerald-600 font-bold">Status: CONFIRMED</div>
+        </div>
+      `).join('');
+    }
+
+    // ================= AI CHATBOT LOGIC =================
+    const CSTU_POLICY_KNOWLEDGE_BASE = `
+      CSTU Student Policy Reference:
+      1. Course Add/Drop Deadline: Day 14 of the semester (100% refund).
+      2. Tuition Refund Schedule: 100% refund in Weeks 1-2; 50% refund in Weeks 3-4; 0% refund after Week 4.
+      3. FERPA Policy: Student academic records are protected. Access requires authorized staff credentials.
+      4. Academic Advising: Students must meet advisors before registering for over 18 credits.
+      5. Student Government: SGA elections take place annually in Spring semester.
+    `;
+
+    function toggleChat() {
+      document.getElementById('chatWindow').classList.toggle('hidden');
+    }
+
+    function toggleKeyModal() {
+      const modal = document.getElementById('keyModal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        document.getElementById('geminiKeyInput').value = localStorage.getItem('cstu_gemini_key') || '';
+      }
+    }
+
+    function saveGeminiKey(key) {
+      if (key.trim()) {
+        localStorage.setItem('cstu_gemini_key', key.trim());
+        showToast('🔑 Gemini API Key saved to LocalStorage!', '✅');
+      } else {
+        localStorage.removeItem('cstu_gemini_key');
+        showToast('Gemini API Key cleared. Operating in Grounded Offline Mode.');
+      }
+      toggleKeyModal();
+    }
+
+    async function handleSendMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendChatMessage(text, 'user');
+      input.value = '';
+
+      // Append thinking indicator
+      const thinkingId = appendChatMessage('Thinking...', 'bot');
+
+      const apiKey = localStorage.getItem('cstu_gemini_key');
+
+      if (apiKey) {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: `${CSTU_POLICY_KNOWLEDGE_BASE}\n\nStudent Question: ${text}` }]
+              }]
+            })
+          });
+
+          const data = await res.json();
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I could not process your query via Gemini. Here is a CSTU policy answer: Course add/drop deadline is Day 14 with 100% refund.';
+          updateChatMessage(thinkingId, reply);
+          return;
+        } catch (err) {
+          console.warn('Gemini API call failed, falling back to grounded mock mode.', err);
+        }
+      }
+
+      // Grounded Mock Offline Fallback Mode
+      setTimeout(() => {
+        const lower = text.toLowerCase();
+        let reply = "I am grounded in CSTU policies. For add/drop deadlines, note that Day 14 is the last day for 100% tuition refund. You can manage your course schedule directly in the Courses tab!";
+        
+        if (lower.includes('refund') || lower.includes('tuition') || lower.includes('money')) {
+          reply = "CSTU Tuition Refund Policy: 100% refund during Weeks 1-2, 50% refund during Weeks 3-4, and 0% refund after Week 4.";
+        } else if (lower.includes('ferpa') || lower.includes('privacy') || lower.includes('security')) {
+          reply = "Under CSTU FERPA policy, student records are protected and only accessible by authorized role credentials (such as IT Directors or Academic Advisors).";
+        } else if (lower.includes('advisor') || lower.includes('appointment')) {
+          reply = "You can book advising sessions directly in the Advising tab! Slots are available with Dr. Evelyn Carter and Prof. Marcus Vance.";
+        } else if (lower.includes('event') || lower.includes('hackathon') || lower.includes('club')) {
+          reply = "Check out the Events and Clubs tabs! You can RSVP for hackathons or join student organizations like the CSTU AI Society.";
+        }
+
+        updateChatMessage(thinkingId, reply);
+      }, 600);
+    }
+
+    function appendChatMessage(msg, sender) {
+      const container = document.getElementById('chatMessages');
+      const msgId = 'msg-' + Date.now();
+      const div = document.createElement('div');
+      div.id = msgId;
+      if (sender === 'user') {
+        div.className = 'bg-indigo-600 text-white p-3 rounded-2xl max-w-[85%] ml-auto text-xs';
+      } else {
+        div.className = 'bg-slate-800/80 border border-slate-700/60 p-3 rounded-2xl max-w-[85%] text-slate-200 text-xs';
+      }
+      div.textContent = msg;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      return msgId;
+    }
+
+    function updateChatMessage(msgId, newText) {
+      const el = document.getElementById(msgId);
+      if (el) el.textContent = newText;
+    }
+
+    // ================= SCHEMA MODAL =================
+    function openSchemaModal() {
+      document.getElementById('schemaModal').classList.remove('hidden');
+      fetch('/database/SCHEMA.sql')
+        .then(r => r.text())
+        .then(sql => {
+          document.getElementById('schemaContent').textContent = sql;
+        })
+        .catch(() => {
+          document.getElementById('schemaContent').textContent = `-- Reference SQL Schema\nCREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255), role VARCHAR(50));\nCREATE TABLE courses (id SERIAL PRIMARY KEY, code VARCHAR(20), title VARCHAR(255));`;
+        });
+    }
+
+    function closeSchemaModal() {
+      document.getElementById('schemaModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
