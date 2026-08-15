@@ -1,0 +1,39 @@
+# Node / NPM / Workspaces
+node_modules/
+.npm
+.yarn/
+*.log
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Backend Build
+backend/dist/
+
+# Prisma & SQLite / Dev DB
+prisma/*.db
+prisma/*.db-journal
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE & OS
+.DS_Store
+*.pem
+.vscode/
+.idea/
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Temporary files
+temp/
+tmp/
