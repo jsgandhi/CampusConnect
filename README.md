@@ -14,32 +14,6 @@ Developed by **Team 3 – Nexus Solutions**:
 
 ---
 
-## 📁 Repository Structure (`app_build/`)
-
-The application lives inside `app_build/`:
-
-```
-CampusConnect/
-├── app_build/
-│   ├── backend/
-│   │   ├── server.js                          ← Zero-dependency Node.js HTTP server
-│   │   └── server.py                          ← Zero-dependency Python 3 HTTP server
-│   ├── database/
-│   │   └── SCHEMA.sql                         ← Relational DB reference blueprint
-│   ├── frontend/
-│   │   ├── login.html                         ← Single Sign-On gateway (4 personas)
-│   │   ├── index.html                         ← Student Portal dashboard
-│   │   ├── observability.html                 ← IT & DevOps Observability dashboard
-│   │   ├── steering_committee_dashboard.html  ← Steering Committee executive dashboard
-│   │   └── dashboard_metrics_template.csv     ← Executive metrics template
-│   └── README.md                              ← Detailed app documentation
-├── MVP_Technical_Playbook.md                  ← Architectural scope & implementation guide
-├── AGENTS.md                                  ← AI Agent operating guidelines
-└── README.md                                  ← Top-level project guide
-```
-
----
-
 ## 🚀 How to Run Locally
 
 ### 1. Clone the Repository
@@ -49,18 +23,10 @@ cd CampusConnect
 ```
 
 ### 2. Start the Local Server
-Zero external npm packages or database installations required!
 
-**Using Node.js**:
-```bash
-cd app_build/backend
-node server.js
+
 ```
-
-**Using Python 3**:
-```bash
-cd app_build/backend
-python3 server.py
+npm run dev
 ```
 
 Your default browser will automatically open to **http://localhost:3000**.
