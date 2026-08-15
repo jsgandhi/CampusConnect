@@ -1,9 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
 import { EventRsvpSchema } from '@campusconnect/shared';
-
-const prisma = new PrismaClient();
+import { mockEvents, mockRsvps } from '../data/mock-data.js';
 
 export const getAllEvents = async (
   _req: AuthenticatedRequest,
@@ -11,14 +9,7 @@ export const getAllEvents = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const events = await prisma.campusEvent.findMany({
-      orderBy: { startTime: 'asc' },
-    });
-
-    res.json({
-      success: true,
-      data: events,
-    });
+    res.json({ success: true, data: mockEvents });
   } catch (error) {
     next(error);
   }
@@ -32,40 +23,19 @@ export const rsvpEvent = async (
   try {
     const { eventId } = EventRsvpSchema.parse(req.body);
     const userId = req.user?.id || 'demo-student-id';
-
-    let user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-    }
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Student profile not found' },
-      });
+    const event = mockEvents.find((item) => item.id === eventId);
+    if (!event) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Event not found' } });
       return;
     }
-
-    const rsvp = await prisma.eventRSVP.upsert({
-      where: {
-        userId_eventId: {
-          userId: user.id,
-          eventId,
-        },
-      },
-      update: { status: 'CONFIRMED' },
-      create: {
-        userId: user.id,
-        eventId,
-        status: 'CONFIRMED',
-      },
-      include: { event: true },
-    });
-
-    await prisma.campusEvent.update({
-      where: { id: eventId },
-      data: { rsvpCount: { increment: 1 } },
-    });
+    const existing = mockRsvps.find((item) => item.userId === userId && item.eventId === eventId);
+    if (existing) {
+      res.status(400).json({ success: false, error: { code: 'ALREADY_RSVPED', message: 'You have already joined this event' } });
+      return;
+    }
+    const rsvp = { id: `rsvp-${Date.now()}`, userId, eventId, status: 'CONFIRMED' as const, createdAt: new Date().toISOString(), event };
+    mockRsvps.push(rsvp);
+    event.rsvpCount += 1;
 
     res.json({
       success: true,
@@ -84,33 +54,14 @@ export const cancelRsvp = async (
   try {
     const { eventId } = req.params;
     const userId = req.user?.id || 'demo-student-id';
-
-    let user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-    }
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Student profile not found' },
-      });
+    const index = mockRsvps.findIndex((item) => item.userId === userId && item.eventId === eventId);
+    if (index === -1) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'RSVP not found' } });
       return;
     }
-
-    await prisma.eventRSVP.delete({
-      where: {
-        userId_eventId: {
-          userId: user.id,
-          eventId,
-        },
-      },
-    });
-
-    await prisma.campusEvent.update({
-      where: { id: eventId },
-      data: { rsvpCount: { decrement: 1 } },
-    });
+    mockRsvps.splice(index, 1);
+    const event = mockEvents.find((item) => item.id === eventId);
+    if (event && event.rsvpCount > 0) event.rsvpCount -= 1;
 
     res.json({
       success: true,

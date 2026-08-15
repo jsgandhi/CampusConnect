@@ -1,9 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
 import { EnrollCourseSchema } from '@campusconnect/shared';
-
-const prisma = new PrismaClient();
+import { mockCourses, mockEnrollments } from '../data/mock-data.js';
 
 export const getAllCourses = async (
   _req: AuthenticatedRequest,
@@ -11,14 +9,7 @@ export const getAllCourses = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const courses = await prisma.course.findMany({
-      orderBy: { code: 'asc' },
-    });
-
-    res.json({
-      success: true,
-      data: courses,
-    });
+    res.json({ success: true, data: mockCourses });
   } catch (error) {
     next(error);
   }
@@ -32,22 +23,7 @@ export const enrollCourse = async (
   try {
     const { courseId } = EnrollCourseSchema.parse(req.body);
     const userId = req.user?.id || 'demo-student-id';
-
-    // Find student in DB or fallback to demo student
-    let user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-    }
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Student profile not found' },
-      });
-      return;
-    }
-
-    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    const course = mockCourses.find((item) => item.id === courseId);
     if (!course) {
       res.status(404).json({
         success: false,
@@ -56,15 +32,7 @@ export const enrollCourse = async (
       return;
     }
 
-    // Check existing enrollment
-    const existing = await prisma.enrollment.findUnique({
-      where: {
-        userId_courseId: {
-          userId: user.id,
-          courseId,
-        },
-      },
-    });
+    const existing = mockEnrollments.find((item) => item.userId === userId && item.courseId === courseId);
 
     if (existing && existing.status === 'ENROLLED') {
       res.status(400).json({
@@ -74,26 +42,13 @@ export const enrollCourse = async (
       return;
     }
 
-    const enrollment = await prisma.enrollment.upsert({
-      where: {
-        userId_courseId: {
-          userId: user.id,
-          courseId,
-        },
-      },
-      update: { status: 'ENROLLED' },
-      create: {
-        userId: user.id,
-        courseId,
-        status: 'ENROLLED',
-      },
-      include: { course: true },
-    });
-
-    await prisma.course.update({
-      where: { id: courseId },
-      data: { enrolledCount: { increment: 1 } },
-    });
+    if (course.enrolledCount >= course.capacity) {
+      res.status(400).json({ success: false, error: { code: 'COURSE_FULL', message: 'Course is full' } });
+      return;
+    }
+    const enrollment = { id: `enrollment-${Date.now()}`, userId, courseId, status: 'ENROLLED' as const, enrolledAt: new Date().toISOString(), course };
+    mockEnrollments.push(enrollment);
+    course.enrolledCount += 1;
 
     res.json({
       success: true,
@@ -112,33 +67,14 @@ export const dropCourse = async (
   try {
     const { courseId } = req.params;
     const userId = req.user?.id || 'demo-student-id';
-
-    let user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-    }
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Student profile not found' },
-      });
+    const index = mockEnrollments.findIndex((item) => item.userId === userId && item.courseId === courseId);
+    if (index === -1) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Enrollment not found' } });
       return;
     }
-
-    await prisma.enrollment.delete({
-      where: {
-        userId_courseId: {
-          userId: user.id,
-          courseId,
-        },
-      },
-    });
-
-    await prisma.course.update({
-      where: { id: courseId },
-      data: { enrolledCount: { decrement: 1 } },
-    });
+    mockEnrollments.splice(index, 1);
+    const course = mockCourses.find((item) => item.id === courseId);
+    if (course && course.enrolledCount > 0) course.enrolledCount -= 1;
 
     res.json({
       success: true,

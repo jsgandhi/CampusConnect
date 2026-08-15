@@ -3,7 +3,7 @@ export interface StudentPersona {
   email: string;
   passwordHash: string;
   name: string;
-  role: 'STUDENT' | 'CLUB_PRESIDENT' | 'ADMIN';
+  role: 'STUDENT' | 'CLUB_PRESIDENT' | 'IT_DIRECTOR' | 'ADMIN';
   studentId: string;
   major: string;
   title: string;
@@ -23,6 +23,18 @@ export const PREDEFINED_PERSONAS: StudentPersona[] = [
     title: 'Senior Undergraduate Student',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
     gpa: 3.84,
+  },
+  {
+    id: 'persona-it-director',
+    email: 'it-director@cstu.edu',
+    passwordHash: 'password123',
+    name: 'Marcus Vance',
+    role: 'IT_DIRECTOR',
+    studentId: 'CSTU-IT-0042',
+    major: 'Information Technology & Security',
+    title: 'Director of IT Systems & Security',
+    avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256',
+    gpa: 4.0,
   },
   {
     id: 'persona-club-president',

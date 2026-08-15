@@ -69,7 +69,12 @@ export default function LoginPage() {
 
         // Perform fake URL validation/redirect on frontend for verification routines
         // (Note: For real authentication workflows, NextAuth OAuth providers like Google/Azure AD are plugged in here)
-        const fakeValidatedUrl = `/dashboard?persona=${encodeURIComponent(personaMatch.email)}&verified=true`;
+        const destination = personaMatch.role === 'IT_DIRECTOR'
+          ? '/observability'
+          : personaMatch.role === 'ADMIN'
+            ? '/executive'
+            : '/dashboard';
+        const fakeValidatedUrl = `${destination}?persona=${encodeURIComponent(personaMatch.email)}&verified=true`;
         router.push(fakeValidatedUrl);
       } else {
         setAuthError('Invalid credentials. Please verify your CSTU email and password.');

@@ -1,9 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
 import { ScheduleAppointmentSchema } from '@campusconnect/shared';
-
-const prisma = new PrismaClient();
+import { mockAdvisors, mockAppointments } from '../data/mock-data.js';
 
 export const getAdvisors = async (
   _req: AuthenticatedRequest,
@@ -11,14 +9,7 @@ export const getAdvisors = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const advisors = await prisma.advisor.findMany({
-      orderBy: { name: 'asc' },
-    });
-
-    res.json({
-      success: true,
-      data: advisors,
-    });
+    res.json({ success: true, data: mockAdvisors });
   } catch (error) {
     next(error);
   }
@@ -32,24 +23,9 @@ export const getAppointments = async (
   try {
     const userId = req.user?.id || 'demo-student-id';
 
-    let user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-    }
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Student profile not found' },
-      });
-      return;
-    }
-
-    const appointments = await prisma.appointment.findMany({
-      where: { studentId: user.id },
-      include: { advisor: true },
-      orderBy: { startTime: 'asc' },
-    });
+    const appointments = mockAppointments
+      .filter((appointment) => appointment.studentId === userId)
+      .sort((first, second) => first.startTime.localeCompare(second.startTime));
 
     res.json({
       success: true,
@@ -69,31 +45,23 @@ export const scheduleAppointment = async (
     const payload = ScheduleAppointmentSchema.parse(req.body);
     const userId = req.user?.id || 'demo-student-id';
 
-    let user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-    }
-
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Student profile not found' },
-      });
+    const advisor = mockAdvisors.find((item) => item.id === payload.advisorId);
+    if (!advisor) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Advisor not found' } });
       return;
     }
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        studentId: user.id,
-        advisorId: payload.advisorId,
-        startTime: new Date(payload.startTime),
-        endTime: new Date(payload.endTime),
-        purpose: payload.purpose,
-        notes: payload.notes,
-        status: 'SCHEDULED',
-      },
-      include: { advisor: true },
-    });
+    const appointment = {
+      id: `appointment-${Date.now()}`,
+      studentId: userId,
+      advisorId: advisor.id,
+      startTime: payload.startTime,
+      endTime: payload.endTime,
+      purpose: payload.purpose,
+      notes: payload.notes,
+      status: 'SCHEDULED' as const,
+      advisor,
+    };
+    mockAppointments.push(appointment);
 
     res.json({
       success: true,
@@ -112,10 +80,12 @@ export const cancelAppointment = async (
   try {
     const { id } = req.params;
 
-    const appointment = await prisma.appointment.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-    });
+    const appointment = mockAppointments.find((item) => item.id === id);
+    if (!appointment) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Appointment not found' } });
+      return;
+    }
+    appointment.status = 'CANCELLED';
 
     res.json({
       success: true,

@@ -10,13 +10,19 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
-import { BookOpen, Search, CheckCircle2, Clock, MapPin, User, AlertCircle } from 'lucide-react';
+import { BookOpen, Clock, MapPin, User, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { Course } from '@campusconnect/shared';
 
+type MockCourse = Course & { registered: boolean };
+
+interface UserState {
+  registeredCourseIds: string[];
+}
+
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
+  const [courses, setCourses] = useState<MockCourse[]>([]);
+  const [userState, setUserState] = useState<UserState>({ registeredCourseIds: [] });
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -27,55 +33,58 @@ export default function CoursesPage() {
       setLoading(true);
       const res = await apiClient.getCourses();
       if (res.data) {
-        setCourses(res.data);
-        // Default mock enrollment for demo
-        if (res.data.length > 0) {
-          setEnrolledIds(new Set([res.data[0].id, res.data[2]?.id].filter(Boolean)));
-        }
+        setCourses(res.data.map((course) => ({ ...course, registered: false })));
       }
       setLoading(false);
     }
     fetchCourses();
   }, []);
 
-  const handleEnroll = async (courseId: string) => {
-    setActionLoading(courseId);
+  const handleRegister = async (courseId: string) => {
     setFeedback(null);
-    const res = await apiClient.enrollCourse(courseId);
+    setActionLoading(courseId);
+    const response = await apiClient.enrollCourse(courseId);
     setActionLoading(null);
-
-    if (res.success) {
-      setEnrolledIds((prev) => new Set([...Array.from(prev), courseId]));
-      setFeedback({ type: 'success', message: 'Successfully enrolled in course!' });
-    } else {
-      setFeedback({ type: 'danger', message: res.error?.message || 'Enrollment failed' });
+    if (!response.success) {
+      setFeedback({ type: 'danger', message: response.error?.message || 'Course registration failed.' });
+      return;
     }
+    setCourses((currentCourses) => currentCourses.map((course) =>
+      course.id === courseId ? { ...course, registered: true, enrolledCount: course.enrolledCount + 1 } : course
+    ));
+    setUserState((currentUserState) => ({
+      registeredCourseIds: currentUserState.registeredCourseIds.includes(courseId)
+        ? currentUserState.registeredCourseIds
+        : [...currentUserState.registeredCourseIds, courseId],
+    }));
+    setFeedback({ type: 'success', message: 'Course registered and added to your semester schedule.' });
   };
 
-  const handleDrop = async (courseId: string) => {
-    setActionLoading(courseId);
+  const handleRemove = async (courseId: string) => {
     setFeedback(null);
-    const res = await apiClient.dropCourse(courseId);
+    setActionLoading(courseId);
+    const response = await apiClient.dropCourse(courseId);
     setActionLoading(null);
-
-    if (res.success) {
-      setEnrolledIds((prev) => {
-        const next = new Set(prev);
-        next.delete(courseId);
-        return next;
-      });
-      setFeedback({ type: 'success', message: 'Successfully dropped course.' });
-    } else {
-      setFeedback({ type: 'danger', message: res.error?.message || 'Drop failed' });
+    if (!response.success) {
+      setFeedback({ type: 'danger', message: response.error?.message || 'Course removal failed.' });
+      return;
     }
+    setCourses((currentCourses) => currentCourses.map((course) =>
+      course.id === courseId ? { ...course, registered: false, enrolledCount: Math.max(0, course.enrolledCount - 1) } : course
+    ));
+    setUserState((currentUserState) => ({
+      registeredCourseIds: currentUserState.registeredCourseIds.filter((id) => id !== courseId),
+    }));
+    setFeedback({ type: 'success', message: 'Course removed from your semester schedule.' });
   };
 
   const filteredCourses = courses.filter(
     (c) =>
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.code.toLowerCase().includes(search.toLowerCase()) ||
-      c.department.toLowerCase().includes(search.toLowerCase())
+      c.instructor.toLowerCase().includes(search.toLowerCase())
   );
+  const registeredCourses = courses.filter((course) => userState.registeredCourseIds.includes(course.id));
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -93,7 +102,7 @@ export default function CoursesPage() {
 
             <div className="w-full md:w-72">
               <Input
-                placeholder="Search course code or title..."
+                placeholder="Search code, title, or instructor..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-slate-900 border-slate-800"
@@ -112,10 +121,12 @@ export default function CoursesPage() {
               <Skeleton className="h-64 w-full" />
               <Skeleton className="h-64 w-full" />
             </div>
-          ) : filteredCourses.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_18rem] gap-6 items-start">
+              {filteredCourses.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredCourses.map((course) => {
-                const isEnrolled = enrolledIds.has(course.id);
+                const isRegistered = course.registered;
                 const isFull = course.enrolledCount >= course.capacity;
 
                 return (
@@ -125,7 +136,7 @@ export default function CoursesPage() {
                         <span className="text-base font-bold text-brand-400 font-mono">{course.code}</span>
                         <div className="flex items-center gap-2">
                           <Badge variant="neutral">{course.credits} Credits</Badge>
-                          {isEnrolled && <Badge variant="success">Enrolled</Badge>}
+                          {isRegistered && <Badge variant="success">Registered</Badge>}
                         </div>
                       </div>
                       <CardTitle className="text-lg leading-snug">{course.title}</CardTitle>
@@ -162,14 +173,14 @@ export default function CoursesPage() {
                           Seats: <span className={isFull ? 'text-rose-400' : 'text-emerald-400'}>{course.enrolledCount}</span> / {course.capacity}
                         </div>
 
-                        {isEnrolled ? (
+                        {isRegistered ? (
                           <Button
                             variant="danger"
                             size="sm"
                             isLoading={actionLoading === course.id}
-                            onClick={() => handleDrop(course.id)}
+                            onClick={() => handleRemove(course.id)}
                           >
-                            Drop Course
+                            Remove
                           </Button>
                         ) : (
                           <Button
@@ -177,9 +188,9 @@ export default function CoursesPage() {
                             size="sm"
                             disabled={isFull}
                             isLoading={actionLoading === course.id}
-                            onClick={() => handleEnroll(course.id)}
+                            onClick={() => handleRegister(course.id)}
                           >
-                            {isFull ? 'Course Full' : 'Enroll Now'}
+                            {isFull ? 'Course Full' : 'Register'}
                           </Button>
                         )}
                       </div>
@@ -187,12 +198,27 @@ export default function CoursesPage() {
                   </Card>
                 );
               })}
-            </div>
-          ) : (
-            <div className="text-center py-16 glass-panel rounded-2xl space-y-2 border border-slate-800">
-              <AlertCircle className="h-8 w-8 text-slate-500 mx-auto" />
-              <h3 className="text-base font-semibold text-white">No courses match your query</h3>
-              <p className="text-xs text-slate-400">Try searching for a different course code or department.</p>
+              </div>
+              ) : (
+                <div className="text-center py-16 glass-panel rounded-2xl space-y-2 border border-slate-800">
+                  <AlertCircle className="h-8 w-8 text-slate-500 mx-auto" />
+                  <h3 className="text-base font-semibold text-white">No courses match your query</h3>
+                  <p className="text-xs text-slate-400">Try searching for a different course code, title, or instructor.</p>
+                </div>
+              )}
+              <Card className="xl:sticky xl:top-24">
+                <h2 className="text-base font-semibold text-white">My Semester Schedule</h2>
+                <p className="mt-1 text-xs text-slate-400">{registeredCourses.length} registered course{registeredCourses.length === 1 ? '' : 's'}</p>
+                <div className="mt-4 space-y-3">
+                  {registeredCourses.length > 0 ? registeredCourses.map((course) => (
+                    <div key={course.id} className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                      <p className="text-xs font-semibold text-brand-400">{course.code}</p>
+                      <p className="mt-1 text-xs text-slate-200">{course.title}</p>
+                      <p className="mt-2 text-[11px] text-slate-400">{course.schedule}</p>
+                    </div>
+                  )) : <p className="py-5 text-center text-xs text-slate-500">Register for a course to build your schedule.</p>}
+                </div>
+              </Card>
             </div>
           )}
         </main>

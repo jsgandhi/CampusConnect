@@ -9,70 +9,54 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
-import { Calendar, MapPin, Users, CheckCircle2, Clock, Sparkles } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { Calendar, MapPin, Users, Clock, Search } from 'lucide-react';
 import { CampusEvent } from '@campusconnect/shared';
+
+const BASELINE_EVENTS: CampusEvent[] = [
+  { id: 'event-career-fair', title: 'Spring Tech Career Fair', description: 'Meet recruiters from regional technology companies and campus partners.', category: 'CAREER', location: 'Campus Center Great Hall', startTime: '2026-08-20T10:00:00.000Z', endTime: '2026-08-20T15:00:00.000Z', organizer: 'Campus Career Center', capacity: 500, rsvpCount: 312 },
+  { id: 'event-hackathon', title: 'Sustainable Campus AI Hackathon', description: 'Build practical AI solutions for energy, wellness, and student life.', category: 'WORKSHOP', location: 'Innovation Hub Lab 1', startTime: '2026-08-25T09:00:00.000Z', endTime: '2026-08-25T18:00:00.000Z', organizer: 'Developer Student Club', capacity: 120, rsvpCount: 89 },
+  { id: 'event-welcome', title: 'Welcome Back Festival', description: 'Food, music, games, and student organization booths on the quad.', category: 'SOCIAL', location: 'University Quad Lawn', startTime: '2026-08-28T16:00:00.000Z', endTime: '2026-08-28T20:00:00.000Z', organizer: 'Student Government Association', capacity: 1000, rsvpCount: 650 },
+  { id: 'event-symposium', title: 'Computer Science Research Symposium', description: 'Faculty and senior students share research through talks and posters.', category: 'ACADEMIC', location: 'Engineering Auditorium A', startTime: '2026-09-05T13:00:00.000Z', endTime: '2026-09-05T18:00:00.000Z', organizer: 'Computer Science Department', capacity: 250, rsvpCount: 178 },
+  { id: 'event-basketball', title: 'Intramural 3×3 Basketball Tournament', description: 'Register a team and compete for trophies and campus-store prizes.', category: 'SPORTS', location: 'Campus Recreation Center', startTime: '2026-09-06T10:00:00.000Z', endTime: '2026-09-06T17:00:00.000Z', organizer: 'Campus Recreation', capacity: 96, rsvpCount: 64 },
+  { id: 'event-linkedin', title: 'Resume & LinkedIn Masterclass', description: 'Build a stronger resume and professional profile with Career Services.', category: 'WORKSHOP', location: 'Student Union Conference Room B', startTime: '2026-09-10T14:00:00.000Z', endTime: '2026-09-10T16:00:00.000Z', organizer: 'Campus Career Center', capacity: 80, rsvpCount: 55 },
+];
+
+type CategoryFilter = 'ALL' | CampusEvent['category'];
 
 export default function EventsPage() {
   const [events, setEvents] = useState<CampusEvent[]>([]);
   const [rsvpedIds, setRsvpedIds] = useState<Set<string>>(new Set());
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
 
   useEffect(() => {
-    async function fetchEvents() {
-      setLoading(true);
-      const res = await apiClient.getEvents();
-      if (res.data) {
-        setEvents(res.data);
-        if (res.data.length > 0) {
-          setRsvpedIds(new Set([res.data[0].id]));
-        }
-      }
-      setLoading(false);
-    }
-    fetchEvents();
-  }, []);
+    const query = search.trim().toLowerCase();
+    const refetchedEvents = BASELINE_EVENTS.filter((event) => {
+      const matchesCategory = categoryFilter === 'ALL' || event.category === categoryFilter;
+      const matchesKeyword = !query || [event.title, event.description, event.organizer, event.location]
+        .some((value) => value.toLowerCase().includes(query));
+      return matchesCategory && matchesKeyword;
+    });
 
-  const handleRsvp = async (eventId: string) => {
-    setActionLoading(eventId);
+    setEvents(refetchedEvents);
+    setLoading(false);
+  }, [categoryFilter, search]);
+
+  const handleRsvp = (eventId: string) => {
     setFeedback(null);
-    const res = await apiClient.rsvpEvent(eventId);
-    setActionLoading(null);
-
-    if (res.success) {
-      setRsvpedIds((prev) => new Set([...Array.from(prev), eventId]));
-      setFeedback({ type: 'success', message: 'RSVP confirmed! Event saved to your student schedule.' });
-    } else {
-      setFeedback({ type: 'danger', message: res.error?.message || 'RSVP failed' });
-    }
+    setRsvpedIds((previous) => new Set([...previous, eventId]));
+    setFeedback({ type: 'success', message: 'RSVP confirmed! Event saved to your student schedule.' });
   };
 
-  const handleCancelRsvp = async (eventId: string) => {
-    setActionLoading(eventId);
+  const handleCancelRsvp = (eventId: string) => {
     setFeedback(null);
-    const res = await apiClient.cancelRsvp(eventId);
-    setActionLoading(null);
-
-    if (res.success) {
-      setRsvpedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(eventId);
-        return next;
-      });
-      setFeedback({ type: 'success', message: 'RSVP cancelled.' });
-    } else {
-      setFeedback({ type: 'danger', message: res.error?.message || 'Cancellation failed' });
-    }
+    setRsvpedIds((previous) => new Set([...previous].filter((id) => id !== eventId)));
+    setFeedback({ type: 'success', message: 'RSVP cancelled.' });
   };
 
-  const categories = ['ALL', 'CAREER', 'WORKSHOP', 'SOCIAL', 'ACADEMIC'];
-
-  const filteredEvents = events.filter(
-    (ev) => categoryFilter === 'ALL' || ev.category === categoryFilter
-  );
+  const categories: CategoryFilter[] = ['ALL', 'CAREER', 'SOCIAL', 'ACADEMIC', 'WORKSHOP', 'SPORTS'];
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -88,7 +72,11 @@ export default function EventsPage() {
               <p className="text-sm text-slate-400">Career fairs, hackathons, workshops, and student networking</p>
             </div>
 
-            {/* Category Filter Pills */}
+            <div className="flex w-full flex-col gap-3 md:w-auto">
+              <div className="relative w-full md:w-72">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search events..." className="w-full rounded-lg border border-slate-800 bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              </div>
             <div className="flex flex-wrap gap-2">
               {categories.map((cat) => (
                 <button
@@ -100,9 +88,10 @@ export default function EventsPage() {
                       : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
                   }`}
                 >
-                  {cat}
+                  {cat === 'ALL' ? 'All' : `${cat[0]}${cat.slice(1).toLowerCase()}`}
                 </button>
               ))}
+            </div>
             </div>
           </div>
 
@@ -117,9 +106,9 @@ export default function EventsPage() {
               <Skeleton className="h-72 w-full" />
               <Skeleton className="h-72 w-full" />
             </div>
-          ) : filteredEvents.length > 0 ? (
+          ) : events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEvents.map((ev) => {
+              {events.map((ev) => {
                 const isRsvped = rsvpedIds.has(ev.id);
 
                 return (
@@ -162,7 +151,6 @@ export default function EventsPage() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            isLoading={actionLoading === ev.id}
                             onClick={() => handleCancelRsvp(ev.id)}
                           >
                             Cancel RSVP
@@ -171,7 +159,6 @@ export default function EventsPage() {
                           <Button
                             variant="primary"
                             size="sm"
-                            isLoading={actionLoading === ev.id}
                             onClick={() => handleRsvp(ev.id)}
                           >
                             RSVP Now
@@ -185,7 +172,7 @@ export default function EventsPage() {
             </div>
           ) : (
             <div className="text-center py-16 glass-panel rounded-2xl border border-slate-800">
-              <p className="text-sm text-slate-400">No events found in category &quot;{categoryFilter}&quot;.</p>
+              <p className="text-sm text-slate-400">No events match the selected category and keyword filters.</p>
             </div>
           )}
         </main>

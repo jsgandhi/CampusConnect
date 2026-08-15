@@ -11,9 +11,26 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
-import { UserCheck, Calendar as CalendarIcon, Clock, MapPin, Plus, CheckCircle2, XCircle } from 'lucide-react';
+import { UserCheck, Calendar as CalendarIcon, Clock, MapPin } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { Advisor, Appointment } from '@campusconnect/shared';
+
+interface AdvisorSlot {
+  id: string;
+  advisorId: string;
+  startTime: string;
+  label: string;
+  available: boolean;
+}
+
+const INITIAL_SLOTS: AdvisorSlot[] = [
+  { id: 'slot-1', advisorId: 'advisor-chen', startTime: '2026-08-25T10:00:00.000Z', label: 'Mon, Aug 25 · 10:00 AM', available: true },
+  { id: 'slot-2', advisorId: 'advisor-chen', startTime: '2026-08-25T14:00:00.000Z', label: 'Mon, Aug 25 · 2:00 PM', available: true },
+  { id: 'slot-3', advisorId: 'advisor-brooks', startTime: '2026-08-26T11:00:00.000Z', label: 'Tue, Aug 26 · 11:00 AM', available: true },
+  { id: 'slot-4', advisorId: 'advisor-brooks', startTime: '2026-08-26T15:30:00.000Z', label: 'Tue, Aug 26 · 3:30 PM', available: true },
+  { id: 'slot-5', advisorId: 'advisor-nair', startTime: '2026-08-27T09:30:00.000Z', label: 'Wed, Aug 27 · 9:30 AM', available: true },
+  { id: 'slot-6', advisorId: 'advisor-nair', startTime: '2026-08-27T13:00:00.000Z', label: 'Wed, Aug 27 · 1:00 PM', available: true },
+];
 
 export default function AppointmentsPage() {
   const [advisors, setAdvisors] = useState<Advisor[]>([]);
@@ -21,10 +38,10 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAdvisor, setSelectedAdvisor] = useState<Advisor | null>(null);
+  const [slots, setSlots] = useState<AdvisorSlot[]>(INITIAL_SLOTS);
+  const [selectedSlot, setSelectedSlot] = useState<AdvisorSlot | null>(null);
 
   // Form State
-  const [appointmentDate, setAppointmentDate] = useState('2026-08-25');
-  const [appointmentTime, setAppointmentTime] = useState('14:00');
   const [purpose, setPurpose] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,50 +62,52 @@ export default function AppointmentsPage() {
     fetchData();
   }, []);
 
-  const handleOpenBooking = (advisor: Advisor) => {
+  const handleSelectSlot = (slot: AdvisorSlot) => {
+    const advisor = advisors.find((item) => item.id === slot.advisorId);
+    if (!advisor) return;
     setSelectedAdvisor(advisor);
+    setSelectedSlot(slot);
+    setPurpose('');
+    setNotes('');
     setIsModalOpen(true);
   };
 
-  const handleBookAppointment = async (e: React.FormEvent) => {
+  const handleBookAppointment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAdvisor || !purpose) return;
+    if (!selectedAdvisor || !selectedSlot || !purpose) return;
 
     setSubmitting(true);
     setFeedback(null);
-
-    const startDateTime = new Date(`${appointmentDate}T${appointmentTime}:00Z`).toISOString();
-    const endDateTime = new Date(new Date(startDateTime).getTime() + 30 * 60000).toISOString();
-
-    const res = await apiClient.scheduleAppointment({
+    const endTime = new Date(new Date(selectedSlot.startTime).getTime() + 30 * 60 * 1000).toISOString();
+    setAppointments((previous) => [...previous, {
+      id: `appointment-${selectedSlot.id}`,
+      studentId: 'demo-student-id',
       advisorId: selectedAdvisor.id,
-      startTime: startDateTime,
-      endTime: endDateTime,
+      startTime: selectedSlot.startTime,
+      endTime,
       purpose,
       notes,
-    });
-
+      status: 'SCHEDULED',
+      advisor: selectedAdvisor,
+    }]);
+    setSlots((previous) => previous.map((slot) =>
+      slot.id === selectedSlot.id ? { ...slot, available: false } : slot
+    ));
     setSubmitting(false);
-
-    if (res.success && res.data) {
-      setAppointments((prev) => [...prev, res.data!]);
-      setIsModalOpen(false);
-      setFeedback({ type: 'success', message: `Appointment scheduled with ${selectedAdvisor.name}!` });
-      setPurpose('');
-      setNotes('');
-    } else {
-      setFeedback({ type: 'danger', message: res.error?.message || 'Booking failed' });
-    }
+    setIsModalOpen(false);
+    setFeedback({ type: 'success', message: `Appointment scheduled with ${selectedAdvisor.name}!` });
+    setSelectedSlot(null);
+    setPurpose('');
+    setNotes('');
   };
 
-  const handleCancelAppointment = async (id: string) => {
-    const res = await apiClient.cancelAppointment(id);
-    if (res.success) {
-      setAppointments((prev) =>
-        prev.map((app) => (app.id === id ? { ...app, status: 'CANCELLED' as const } : app))
-      );
-      setFeedback({ type: 'success', message: 'Appointment status updated to CANCELLED.' });
-    }
+  const handleCancelAppointment = (id: string) => {
+    setAppointments((previous) => previous.map((appointment) =>
+      appointment.id === id ? { ...appointment, status: 'CANCELLED' as const } : appointment
+    ));
+    const slotId = id.replace('appointment-', '');
+    setSlots((previous) => previous.map((slot) => slot.id === slotId ? { ...slot, available: true } : slot));
+    setFeedback({ type: 'success', message: 'Appointment cancelled and time slot reopened.' });
   };
 
   return (
@@ -151,7 +170,31 @@ export default function AppointmentsPage() {
             )}
           </div>
 
-          {/* Section 2: Department Advisors Directory */}
+          {/* Section 2: Available advisor time slots */}
+          <div className="space-y-4 pt-4 border-t border-slate-800">
+            <div>
+              <h2 className="text-lg font-bold text-white">Available Time Slots</h2>
+              <p className="mt-1 text-xs text-slate-400">Select an available slot to review and confirm your appointment.</p>
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {slots.map((slot) => {
+                  const advisor = advisors.find((item) => item.id === slot.advisorId);
+                  return (
+                    <button key={slot.id} type="button" disabled={!slot.available} onClick={() => handleSelectSlot(slot)} className={`rounded-xl border p-4 text-left transition ${slot.available ? 'border-emerald-700/60 bg-emerald-950/20 hover:border-emerald-400 hover:bg-emerald-950/40' : 'cursor-not-allowed border-slate-800 bg-slate-900/40 opacity-50'}`}>
+                      <p className="text-xs font-semibold text-white">{advisor?.name ?? 'Advisor unavailable'}</p>
+                      <p className="mt-1 text-xs text-slate-400">{slot.label}</p>
+                      <p className={`mt-3 text-[11px] font-medium ${slot.available ? 'text-emerald-400' : 'text-slate-500'}`}>{slot.available ? 'Available — select to book' : 'Reserved'}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Department Advisors Directory */}
           <div className="space-y-4 pt-4 border-t border-slate-800">
             <h2 className="text-lg font-bold text-white">Available Department Advisors</h2>
 
@@ -193,14 +236,7 @@ export default function AppointmentsPage() {
                         ))}
                       </div>
 
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="w-full gap-2"
-                        onClick={() => handleOpenBooking(advisor)}
-                      >
-                        <Plus className="h-4 w-4" /> Book Appointment
-                      </Button>
+                      <p className="text-xs text-slate-400">Choose one of this advisor&apos;s time slots above to book.</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -217,21 +253,9 @@ export default function AppointmentsPage() {
         title={`Book Session with ${selectedAdvisor?.name}`}
       >
         <form onSubmit={handleBookAppointment} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Date"
-              type="date"
-              value={appointmentDate}
-              onChange={(e) => setAppointmentDate(e.target.value)}
-              required
-            />
-            <Input
-              label="Time"
-              type="time"
-              value={appointmentTime}
-              onChange={(e) => setAppointmentTime(e.target.value)}
-              required
-            />
+          <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-xs text-slate-300">
+            <p className="font-semibold text-white">{selectedSlot?.label}</p>
+            <p className="mt-1">Advisor: {selectedAdvisor?.name}</p>
           </div>
 
           <Input
