@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Sidebar } from '@/components/sidebar';
 import { Footer } from '@/components/footer';
@@ -8,23 +8,45 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
-import { Terminal, RefreshCw, Database, ShieldAlert, CheckCircle2, Server, Cpu } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { Terminal, RefreshCw, Database, ShieldAlert, Server, Cpu, Upload, Download } from 'lucide-react';
+import { AuditState, BASELINE_AUDIT_STATE, AuditStateSchema, loadAuditState, saveAuditState } from '@/lib/audit-state';
 
 export default function DevPanelPage() {
   const [resetting, setResetting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
+  const [auditState, setAuditState] = useState<AuditState>(BASELINE_AUDIT_STATE);
+  const [transportJson, setTransportJson] = useState(JSON.stringify(BASELINE_AUDIT_STATE, null, 2));
+  const [hydrated, setHydrated] = useState(false);
 
-  const handleResetData = async () => {
+  useEffect(() => {
+    const savedState = loadAuditState();
+    setAuditState(savedState);
+    setTransportJson(JSON.stringify(savedState, null, 2));
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveAuditState(auditState);
+    setTransportJson(JSON.stringify(auditState, null, 2));
+  }, [auditState, hydrated]);
+
+  const handleResetData = () => {
     setResetting(true);
     setFeedback(null);
-    const res = await apiClient.resetDemoData();
+    setAuditState(BASELINE_AUDIT_STATE);
     setResetting(false);
+    setFeedback({ type: 'success', message: 'Local audit state restored to the baseline test datasets.' });
+  };
 
-    if (res.success) {
-      setFeedback({ type: 'success', message: 'Successfully reset transactional demo data. Database ready for testing.' });
-    } else {
-      setFeedback({ type: 'danger', message: res.error?.message || 'Reset failed' });
+  const handleImport = () => {
+    try {
+      const parsed: unknown = JSON.parse(transportJson);
+      const importedState = AuditStateSchema.parse(parsed);
+      setAuditState(importedState);
+      setFeedback({ type: 'success', message: 'Audit state imported and persisted locally.' });
+    } catch {
+      setFeedback({ type: 'danger', message: 'Import failed. Provide valid audit-state JSON with courses, events, and advisors arrays.' });
     }
   };
 
@@ -43,7 +65,7 @@ export default function DevPanelPage() {
               <Terminal className="h-7 w-7 text-amber-400" /> Developer Testing & State Controller
             </h1>
             <p className="text-sm text-slate-400">
-              Tooling to inspect backend state, trigger database re-seeding, and test mock student authentication.
+              Persist, reset, and transport the frontend mock datasets used during acceptance testing.
             </p>
           </div>
 
@@ -106,12 +128,12 @@ export default function DevPanelPage() {
                   <RefreshCw className="h-5 w-5 text-amber-400" /> Reset Demo State
                 </CardTitle>
                 <CardDescription>
-                  Purge user-created course enrollments, event RSVPs, and appointment bookings back to clean state.
+                  Restore the default course, event, and advisor test datasets in localStorage.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Alert variant="info">
-                  This action clears test activity while retaining seeded courses and advisor profiles.
+                  This affects browser-local mock state only; it does not alter shared backend mock data.
                 </Alert>
                 <Button
                   variant="danger"
@@ -119,7 +141,7 @@ export default function DevPanelPage() {
                   isLoading={resetting}
                   onClick={handleResetData}
                 >
-                  <ShieldAlert className="h-4 w-4" /> Reset User Activity & Mock Data
+                  <ShieldAlert className="h-4 w-4" /> Wipe and Reset to Baseline
                 </Button>
               </CardContent>
             </Card>
@@ -127,20 +149,16 @@ export default function DevPanelPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Database className="h-5 w-5 text-brand-400" /> Database Seeding Info
+                  <Download className="h-5 w-5 text-brand-400" /> JSON State Transporter
                 </CardTitle>
                 <CardDescription>
-                  Run seed script directly via terminal CLI to rebuild full dataset.
+                  Copy the exported JSON to share test state, or paste a valid payload and import it.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-xs text-slate-300">To re-seed the PostgreSQL database from command line:</p>
-                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-brand-300">
-                  npm run db:seed
-                </div>
-                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
-                  docker-compose up -d
-                </div>
+                <textarea aria-label="Audit state JSON" value={transportJson} onChange={(event) => setTransportJson(event.target.value)} className="h-52 w-full rounded-lg border border-slate-800 bg-slate-900 p-3 font-mono text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                <Button variant="primary" className="w-full gap-2" onClick={handleImport}><Upload className="h-4 w-4" /> Import JSON State</Button>
+                <p className="text-[11px] text-slate-500">Current baseline: {auditState.courses.length} courses, {auditState.events.length} events, {auditState.advisors.length} advisors.</p>
               </CardContent>
             </Card>
           </div>
