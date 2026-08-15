@@ -24,16 +24,25 @@ const BASELINE_EVENTS: CampusEvent[] = [
 type CategoryFilter = 'ALL' | CampusEvent['category'];
 
 export default function EventsPage() {
+  const [eventCatalog, setEventCatalog] = useState<CampusEvent[]>(BASELINE_EVENTS);
   const [events, setEvents] = useState<CampusEvent[]>([]);
   const [rsvpedIds, setRsvpedIds] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('campusconnect_user');
+    if (storedUser) {
+      setIsAdmin(JSON.parse(storedUser).email === 'admin@cstu.edu');
+    }
+  }, []);
 
   useEffect(() => {
     const query = search.trim().toLowerCase();
-    const refetchedEvents = BASELINE_EVENTS.filter((event) => {
+    const refetchedEvents = eventCatalog.filter((event) => {
       const matchesCategory = categoryFilter === 'ALL' || event.category === categoryFilter;
       const matchesKeyword = !query || [event.title, event.description, event.organizer, event.location]
         .some((value) => value.toLowerCase().includes(query));
@@ -42,7 +51,7 @@ export default function EventsPage() {
 
     setEvents(refetchedEvents);
     setLoading(false);
-  }, [categoryFilter, search]);
+  }, [categoryFilter, eventCatalog, search]);
 
   const handleRsvp = (eventId: string) => {
     setFeedback(null);
@@ -54,6 +63,12 @@ export default function EventsPage() {
     setFeedback(null);
     setRsvpedIds((previous) => new Set([...previous].filter((id) => id !== eventId)));
     setFeedback({ type: 'success', message: 'RSVP cancelled.' });
+  };
+
+  const handleRemoveEvent = (eventId: string) => {
+    setEventCatalog((previous) => previous.filter((event) => event.id !== eventId));
+    setRsvpedIds((previous) => new Set([...previous].filter((id) => id !== eventId)));
+    setFeedback({ type: 'success', message: 'Event removed by an administrative override.' });
   };
 
   const categories: CategoryFilter[] = ['ALL', 'CAREER', 'SOCIAL', 'ACADEMIC', 'WORKSHOP', 'SPORTS'];
@@ -142,11 +157,12 @@ export default function EventsPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
                         <span className="text-xs text-slate-400 font-mono">
                           {ev.rsvpCount} Attending
                         </span>
 
+                        <div className="flex gap-2">
                         {isRsvped ? (
                           <Button
                             variant="secondary"
@@ -164,6 +180,8 @@ export default function EventsPage() {
                             RSVP Now
                           </Button>
                         )}
+                        {isAdmin && <Button variant="danger" size="sm" onClick={() => handleRemoveEvent(ev.id)}>Remove Event</Button>}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

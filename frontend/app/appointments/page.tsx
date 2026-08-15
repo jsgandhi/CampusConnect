@@ -46,6 +46,7 @@ export default function AppointmentsPage() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -60,6 +61,13 @@ export default function AppointmentsPage() {
       setLoading(false);
     }
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('campusconnect_user');
+    if (storedUser) {
+      setIsAdmin(JSON.parse(storedUser).email === 'admin@cstu.edu');
+    }
   }, []);
 
   const handleSelectSlot = (slot: AdvisorSlot) => {
@@ -108,6 +116,11 @@ export default function AppointmentsPage() {
     const slotId = id.replace('appointment-', '');
     setSlots((previous) => previous.map((slot) => slot.id === slotId ? { ...slot, available: true } : slot));
     setFeedback({ type: 'success', message: 'Appointment cancelled and time slot reopened.' });
+  };
+
+  const handleAdminCancelSlot = (slotId: string) => {
+    setSlots((previous) => previous.map((slot) => slot.id === slotId ? { ...slot, available: true } : slot));
+    setFeedback({ type: 'success', message: 'Administrative override cancelled the reserved time slot.' });
   };
 
   return (
@@ -183,11 +196,20 @@ export default function AppointmentsPage() {
                 {slots.map((slot) => {
                   const advisor = advisors.find((item) => item.id === slot.advisorId);
                   return (
+                    slot.available ? (
                     <button key={slot.id} type="button" disabled={!slot.available} onClick={() => handleSelectSlot(slot)} className={`rounded-xl border p-4 text-left transition ${slot.available ? 'border-emerald-700/60 bg-emerald-950/20 hover:border-emerald-400 hover:bg-emerald-950/40' : 'cursor-not-allowed border-slate-800 bg-slate-900/40 opacity-50'}`}>
                       <p className="text-xs font-semibold text-white">{advisor?.name ?? 'Advisor unavailable'}</p>
                       <p className="mt-1 text-xs text-slate-400">{slot.label}</p>
                       <p className={`mt-3 text-[11px] font-medium ${slot.available ? 'text-emerald-400' : 'text-slate-500'}`}>{slot.available ? 'Available — select to book' : 'Reserved'}</p>
                     </button>
+                    ) : (
+                      <div key={slot.id} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-left opacity-50">
+                        <p className="text-xs font-semibold text-white">{advisor?.name ?? 'Advisor unavailable'}</p>
+                        <p className="mt-1 text-xs text-slate-400">{slot.label}</p>
+                        <p className="mt-3 text-[11px] font-medium text-slate-500">Reserved</p>
+                        {isAdmin && <Button variant="danger" size="sm" className="mt-3 opacity-100" onClick={() => handleAdminCancelSlot(slot.id)}>Cancel Slot</Button>}
+                      </div>
+                    )
                   );
                 })}
               </div>
