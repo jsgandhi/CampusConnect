@@ -77,6 +77,15 @@ function DashboardContent() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // ── Club event publishing modal state ──
+  const [isPostEventModalOpen, setIsPostEventModalOpen] = useState(false);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventCategory, setEventCategory] = useState<CampusEvent['category']>('SOCIAL');
+  const [eventDate, setEventDate] = useState('2026-09-25');
+  const [eventTime, setEventTime] = useState('17:00');
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventDescription, setEventDescription] = useState('');
+
   // ── Auto-dismiss feedback after 4s ──
   useEffect(() => {
     if (!feedback) return;
@@ -191,6 +200,31 @@ function DashboardContent() {
     } else {
       setFeedback({ type: 'danger', message: res.error?.message || 'Cancellation failed.' });
     }
+  };
+
+  const handlePostEvent = (event: React.FormEvent) => {
+    event.preventDefault();
+    const startTime = new Date(`${eventDate}T${eventTime}:00`).toISOString();
+    const endTime = new Date(new Date(startTime).getTime() + 2 * 60 * 60 * 1000).toISOString();
+    const newEvent: CampusEvent = {
+      id: `club-event-${Date.now()}`,
+      title: eventTitle,
+      description: eventDescription,
+      category: eventCategory,
+      location: eventLocation,
+      startTime,
+      endTime,
+      organizer: activePersona.name,
+      capacity: 100,
+      rsvpCount: 0,
+    };
+
+    setEvents((previous) => [newEvent, ...previous]);
+    setIsPostEventModalOpen(false);
+    setEventTitle('');
+    setEventLocation('');
+    setEventDescription('');
+    setFeedback({ type: 'success', message: 'Your club event has been posted to the campus directory.' });
   };
 
   // ── Advisor booking ──
@@ -478,11 +512,18 @@ function DashboardContent() {
                     <CardTitle>Campus Events</CardTitle>
                     <CardDescription>RSVP to upcoming events</CardDescription>
                   </div>
-                  <Link href="/events">
-                    <Button variant="ghost" size="sm" className="text-xs gap-1">
-                      View All <ArrowUpRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {activePersona.email === 'club-president@cstu.edu' && (
+                      <Button variant="primary" size="sm" className="text-xs gap-1" onClick={() => setIsPostEventModalOpen(true)}>
+                        <Plus className="h-3.5 w-3.5" /> Post Event
+                      </Button>
+                    )}
+                    <Link href="/events">
+                      <Button variant="ghost" size="sm" className="text-xs gap-1">
+                        View All <ArrowUpRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {loading ? (
@@ -671,6 +712,24 @@ function DashboardContent() {
               Confirm Booking
             </Button>
           </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isPostEventModalOpen}
+        onClose={() => setIsPostEventModalOpen(false)}
+        title="Post a Club Event"
+      >
+        <form onSubmit={handlePostEvent} className="space-y-4">
+          <Input label="Event title" value={eventTitle} onChange={(event) => setEventTitle(event.target.value)} placeholder="e.g. Open Source Project Night" required />
+          <div className="grid grid-cols-2 gap-4">
+            <label className="space-y-1.5"><span className="block text-xs font-medium text-slate-300">Category</span><select value={eventCategory} onChange={(event) => setEventCategory(event.target.value as CampusEvent['category'])} className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-slate-100"><option value="SOCIAL">Social</option><option value="ACADEMIC">Academic</option><option value="CAREER">Career</option><option value="WORKSHOP">Workshop</option><option value="SPORTS">Sports</option></select></label>
+            <Input label="Date" type="date" value={eventDate} onChange={(event) => setEventDate(event.target.value)} required />
+          </div>
+          <Input label="Start time" type="time" value={eventTime} onChange={(event) => setEventTime(event.target.value)} required />
+          <Input label="Location" value={eventLocation} onChange={(event) => setEventLocation(event.target.value)} placeholder="Campus location" required />
+          <div className="space-y-1.5"><label className="block text-xs font-medium text-slate-300">Description</label><textarea value={eventDescription} onChange={(event) => setEventDescription(event.target.value)} className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-slate-100" rows={3} required /></div>
+          <div className="flex justify-end gap-3 border-t border-slate-800 pt-2"><Button type="button" variant="ghost" onClick={() => setIsPostEventModalOpen(false)}>Cancel</Button><Button type="submit" variant="primary">Publish Event</Button></div>
         </form>
       </Modal>
 
